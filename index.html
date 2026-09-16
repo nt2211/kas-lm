@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -25,21 +25,21 @@
 
 
 
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=3">
     <script>
-        (function () {
+        (function() {
             try {
                 var t = localStorage.getItem('kaslm_tema');
                 var isDark = t === 'gelap' || (t === 'sistem' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
                 if (isDark) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
-            } catch (e) { }
+            } catch(e) {}
         })();
     </script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script defer src="supabase-adapter.js?v=8"></script>
-    <script defer src="app.js?v=13"></script>
+    <script defer src="app.js?v=12"></script>
 </head>
 
 <body>
@@ -55,7 +55,7 @@
     </div>
 
 
-    <div id="app" v-cloak :class="{ 'chat-fullscreen': chatFullscreen }">
+    <div id="app" v-cloak>
 
         <!-- ============ LOADING ============ -->
         <div v-if="loading" class="fixed inset-0 z-[100] flex items-center justify-center no-print"
@@ -88,8 +88,7 @@
                 <div class="flex items-center gap-3">
                     <div class="brand-mark w-11 h-11">LM</div>
                     <div>
-                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok
-                            L/M' }}</p>
+                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok L/M' }}</p>
                         <p class="text-xs" style="color:#8DA0B5">Kas warga, terbuka dan tercatat</p>
                     </div>
                 </div>
@@ -117,9 +116,7 @@
 
                     <h1 class="text-2xl font-extrabold">{{ modeAuth==='masuk' ? 'Masuk' : 'Daftar akun warga' }}</h1>
                     <p class="text-sm mt-1.5 mb-6" style="color:var(--muted)">
-                        {{ modeAuth==='masuk' ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu
-                        menunggu persetujuan bendahara.' : 'Daftarkan diri Anda sebagai pemilik rumah. Bendahara
-                        memverifikasi sebelum akun aktif.' }}
+                        {{ modeAuth==='masuk' ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu menunggu persetujuan bendahara.' : 'Daftarkan diri Anda sebagai pemilik rumah. Bendahara memverifikasi sebelum akun aktif.' }}
                     </p>
 
                     <div class="seg w-full mb-5">
@@ -230,14 +227,12 @@
                     :style="profil.Status==='Menunggu' ? 'background:var(--amber-tint);color:var(--amber)' : 'background:var(--rose-tint);color:var(--rose)'">
                     <i :data-lucide="profil.Status==='Menunggu' ? 'hourglass' : 'user-x'" class="w-5 h-5"></i>
                 </div>
-                <h2 class="text-xl font-extrabold">{{ profil.Status==='Menunggu' ? 'Menunggu persetujuan bendahara' :
-                    'Akun dinonaktifkan' }}</h2>
+                <h2 class="text-xl font-extrabold">{{ profil.Status==='Menunggu' ? 'Menunggu persetujuan bendahara' : 'Akun dinonaktifkan' }}</h2>
                 <p class="text-sm mt-2" style="color:var(--muted)">
-                    {{ profil.Status==='Menunggu' ? ('Pendaftaran rumah ' + (profil.No_Rumah || '—') + ' sudah
-                    dikirim.') : 'Hubungi bendahara untuk mengaktifkan kembali akun ini.' }}
+                    {{ profil.Status==='Menunggu' ? ('Pendaftaran rumah ' + (profil.No_Rumah || '—') + ' sudah dikirim.') : 'Hubungi bendahara untuk mengaktifkan kembali akun ini.' }}
                 </p>
-                <a v-if="publik.WA_Bendahara" :href="formatWaUrl(publik.WA_Bendahara)" target="_blank"
-                    rel="noopener noreferrer" class="btn btn-ghost w-full mt-4">
+                <a v-if="publik.WA_Bendahara" :href="formatWaUrl(publik.WA_Bendahara)" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-ghost w-full mt-4">
                     <i data-lucide="message-circle" class="w-4 h-4"></i> Hubungi bendahara
                 </a>
                 <div class="flex gap-2 mt-2">
@@ -331,8 +326,7 @@
                                     </span>
                                 </div>
                                 <p class="text-sm mt-1" style="color:#A9BBCE">
-                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada
-                                    tunggakan. Terima kasih.' }}
+                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada tunggakan. Terima kasih.' }}
                                 </p>
                                 <p v-if="warga.bulanMulai" class="text-xs mt-1" style="color:#7C8FA5">Perhitungan iuran
                                     dimulai {{ warga.bulanMulai }}.</p>
@@ -444,8 +438,7 @@
                                     <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                         rupiah(t.Jumlah) }}</p>
                                 </div>
-                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
-                                    penanggung jawab' }}</p>
+                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
                                 <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                     t.Keterangan }}</p>
                                 <a v-if="t.Bukti_Nota_URL" :href="t.Bukti_Nota_URL" target="_blank"
@@ -660,8 +653,7 @@
                                     <div><label class="lbl">Nomor WhatsApp</label><input v-model="formProfil.No_HP"
                                             class="field" inputmode="tel"></div>
                                     <button @click="simpanProfil" :disabled="sedangSimpan"
-                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan
-                                        perubahan' }}</button>
+                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan perubahan' }}</button>
                                 </div>
                             </div>
 
@@ -799,7 +791,7 @@
                     <!-- ================= CHAT ================= -->
                     <template v-if="page==='chat'">
                         <!-- BENDAHARA -->
-                        <div v-if="isAdmin" class="grid lg:grid-cols-[330px_1fr] gap-4 min-w-0">
+                        <div v-if="isAdmin" class="grid lg:grid-cols-[330px_1fr] gap-4 min-w-0 chat-page-main">
                             <!-- daftar warga -->
                             <div class="panel overflow-hidden flex-col min-w-0 chat-panel-box"
                                 :class="chatAktif ? 'hidden lg:flex' : 'flex'">
@@ -861,9 +853,7 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p class="font-semibold text-sm truncate">{{ chatAktif.Nama_Warga }}</p>
-                                            <p class="t-meta">{{ chatAktif.Online ? 'Online' : (chatAktif.Last_Aktif ?
-                                                ('Terakhir aktif ' + tglPendek(chatAktif.Last_Aktif)) : 'Offline') }}
-                                            </p>
+                                            <p class="t-meta">{{ chatAktif.Online ? 'Online' : (chatAktif.Last_Aktif ? ('Terakhir aktif ' + tglPendek(chatAktif.Last_Aktif)) : 'Offline') }}</p>
                                         </div>
                                         <button @click="hapusChat(chatAktif)" class="icon-btn danger"
                                             aria-label="Hapus percakapan"><i data-lucide="trash-2"
@@ -877,8 +867,7 @@
                                                     :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'">
                                                     <template v-if="m.URL_Lampiran">
                                                         <a v-if="isImageUrl(m.URL_Lampiran)" :href="m.URL_Lampiran"
-                                                            target="_blank"
-                                                            class="block mb-1.5 overflow-hidden rounded-lg">
+                                                            target="_blank" class="block mb-1.5 overflow-hidden rounded-lg">
                                                             <img :src="m.URL_Lampiran" loading="lazy"
                                                                 class="w-full object-cover rounded-lg hover:opacity-95 transition-opacity"
                                                                 style="max-height:240px">
@@ -890,8 +879,7 @@
                                                             <span class="truncate">Buka Lampiran</span>
                                                         </a>
                                                     </template>
-                                                    <span v-if="m.Isi_Pesan" class="bubble-text">{{ m.Isi_Pesan
-                                                        }}</span>
+                                                    <span v-if="m.Isi_Pesan" class="bubble-text">{{ m.Isi_Pesan }}</span>
                                                 </div>
                                                 <p class="text-[10px] mt-0.5"
                                                     :class="m.Role_Pengirim==='admin' ? 'text-right' : ''"
@@ -903,24 +891,19 @@
                                     </div>
 
                                     <!-- PREVIEW LAMPIRAN WHATSAPP (Admin) -->
-                                    <div v-if="chatLampiran"
-                                        class="mx-3 mt-2 p-2 px-3 flex items-center justify-between gap-3 rounded-xl"
+                                    <div v-if="chatLampiran" class="mx-3 mt-2 p-2 px-3 flex items-center justify-between gap-3 rounded-xl"
                                         style="background:var(--card-2);border:1px solid var(--line)">
                                         <div class="flex items-center gap-2.5 min-w-0">
-                                            <img v-if="chatLampiran.isImg" :src="chatLampiran.previewUrl"
-                                                class="w-10 h-10 rounded-lg object-cover border" alt="Preview">
-                                            <div v-else class="w-10 h-10 rounded-lg grid place-items-center"
-                                                style="background:var(--sea-tint);color:var(--sea-700)">
+                                            <img v-if="chatLampiran.isImg" :src="chatLampiran.previewUrl" class="w-10 h-10 rounded-lg object-cover border" alt="Preview">
+                                            <div v-else class="w-10 h-10 rounded-lg grid place-items-center" style="background:var(--sea-tint);color:var(--sea-700)">
                                                 <i data-lucide="paperclip" class="w-5 h-5"></i>
                                             </div>
                                             <div class="min-w-0">
                                                 <p class="text-xs font-semibold truncate">{{ chatLampiran.name }}</p>
-                                                <p class="text-[10px]" style="color:var(--muted)">{{ (chatLampiran.size
-                                                    / 1024).toFixed(0) }} KB · Siap kirim</p>
+                                                <p class="text-[10px]" style="color:var(--muted)">{{ (chatLampiran.size / 1024).toFixed(0) }} KB · Siap kirim</p>
                                             </div>
                                         </div>
-                                        <button @click="hapusLampiranChat" class="icon-btn danger p-1"
-                                            title="Hapus lampiran">
+                                        <button @click="hapusLampiranChat" class="icon-btn danger p-1" title="Hapus lampiran">
                                             <i data-lucide="x" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -949,30 +932,23 @@
                             <!-- PERCAKAPAN WARGA DENGAN BENDAHARA (2 Kolom di Desktop) -->
                             <div class="panel flex flex-col chat-panel-box lg:col-span-2">
                                 <div class="p-3 flex items-center gap-3" style="border-bottom:1px solid var(--line)">
-                                    <button @click="kembaliDariChat" class="icon-btn lg:hidden" aria-label="Kembali"><i
-                                            data-lucide="chevron-left" class="w-5 h-5"></i></button>
                                     <div class="w-10 h-10 rounded-xl grid place-items-center font-bold"
                                         style="background:var(--sea-tint);color:var(--sea-700)">RT</div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-semibold text-sm truncate">{{ publik.Nama_Bendahara ||
-                                            'Bendahara' }}</p>
+                                        <p class="font-semibold text-sm truncate">{{ publik.Nama_Bendahara || 'Bendahara' }}</p>
                                         <p class="t-meta">{{ chatAdminOnline ? 'Online' : 'Offline' }}</p>
                                     </div>
                                     <span :class="chatAdminOnline ? 'dot-on' : 'dot-off'"></span>
                                 </div>
 
                                 <!-- BAR CLIENT / WARGA AKTIF (Mobile) -->
-                                <div class="lg:hidden p-2 px-3 border-b flex items-center gap-2 overflow-x-auto"
-                                    style="border-color:var(--line);background:var(--card-2)">
-                                    <span class="text-[11px] font-bold shrink-0" style="color:var(--sea-700)">Warga
-                                        Aktif:</span>
+                                <div class="lg:hidden p-2 px-3 border-b flex items-center gap-2 overflow-x-auto" style="border-color:var(--line);background:var(--card-2)">
+                                    <span class="text-[11px] font-bold shrink-0" style="color:var(--sea-700)">Warga Aktif:</span>
                                     <div v-if="userAktifList && userAktifList.length" class="flex items-center gap-1.5">
-                                        <div v-for="u in userAktifList" :key="'mw'+u.ID_Akun"
-                                            class="relative shrink-0 flex items-center gap-1 bg-[var(--card)] py-0.5 px-2 rounded-full border border-[var(--line)] text-[11px]">
+                                        <div v-for="u in userAktifList" :key="'mw'+u.ID_Akun" class="relative shrink-0 flex items-center gap-1 bg-[var(--card)] py-0.5 px-2 rounded-full border border-[var(--line)] text-[11px]">
                                             <span :class="u.Online ? 'dot-on' : 'dot-off'" class="scale-75"></span>
                                             <span class="font-semibold">{{ u.Nama.split(' ')[0] }}</span>
-                                            <span class="text-[10px]" style="color:var(--muted)">({{ u.No_Rumah
-                                                }})</span>
+                                            <span class="text-[10px]" style="color:var(--muted)">({{ u.No_Rumah }})</span>
                                         </div>
                                     </div>
                                     <span v-else class="text-[11px]" style="color:var(--muted)">Memuat warga…</span>
@@ -1010,24 +986,19 @@
                                 </div>
 
                                 <!-- PREVIEW LAMPIRAN WHATSAPP (Warga) -->
-                                <div v-if="chatLampiran"
-                                    class="mx-3 mt-2 p-2 px-3 flex items-center justify-between gap-3 rounded-xl"
+                                <div v-if="chatLampiran" class="mx-3 mt-2 p-2 px-3 flex items-center justify-between gap-3 rounded-xl"
                                     style="background:var(--card-2);border:1px solid var(--line)">
                                     <div class="flex items-center gap-2.5 min-w-0">
-                                        <img v-if="chatLampiran.isImg" :src="chatLampiran.previewUrl"
-                                            class="w-10 h-10 rounded-lg object-cover border" alt="Preview">
-                                        <div v-else class="w-10 h-10 rounded-lg grid place-items-center"
-                                            style="background:var(--sea-tint);color:var(--sea-700)">
+                                        <img v-if="chatLampiran.isImg" :src="chatLampiran.previewUrl" class="w-10 h-10 rounded-lg object-cover border" alt="Preview">
+                                        <div v-else class="w-10 h-10 rounded-lg grid place-items-center" style="background:var(--sea-tint);color:var(--sea-700)">
                                             <i data-lucide="paperclip" class="w-5 h-5"></i>
                                         </div>
                                         <div class="min-w-0">
                                             <p class="text-xs font-semibold truncate">{{ chatLampiran.name }}</p>
-                                            <p class="text-[10px]" style="color:var(--muted)">{{ (chatLampiran.size /
-                                                1024).toFixed(0) }} KB · Siap kirim</p>
+                                            <p class="text-[10px]" style="color:var(--muted)">{{ (chatLampiran.size / 1024).toFixed(0) }} KB · Siap kirim</p>
                                         </div>
                                     </div>
-                                    <button @click="hapusLampiranChat" class="icon-btn danger p-1"
-                                        title="Hapus lampiran">
+                                    <button @click="hapusLampiranChat" class="icon-btn danger p-1" title="Hapus lampiran">
                                         <i data-lucide="x" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -1043,50 +1014,38 @@
                                         @input="autoResizeTA($event)" rows="1" class="field flex-1 resize-none"
                                         style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
                                     <button @click="kirimChat" class="btn btn-primary shrink-0"
-                                        style="padding:.65rem .85rem"><i data-lucide="send"
-                                            class="w-4 h-4"></i></button>
+                                        style="padding:.65rem .85rem"><i data-lucide="send" class="w-4 h-4"></i></button>
                                 </div>
                             </div>
 
                             <!-- DAFTAR CLIENT / WARGA AKTIF (Desktop Sidebar untuk Warga) -->
                             <div class="hidden lg:flex panel flex-col chat-panel-box">
-                                <div class="p-3 flex items-center justify-between border-b"
-                                    style="border-color:var(--line)">
+                                <div class="p-3 flex items-center justify-between border-b" style="border-color:var(--line)">
                                     <div class="flex items-center gap-2">
-                                        <span
-                                            class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                                         <h3 class="font-bold text-sm">Warga Aktif & Online</h3>
                                     </div>
                                     <span class="chip chip-ok text-[10px] py-0 px-2">{{ totalOnline }} online</span>
                                 </div>
                                 <div class="flex-1 overflow-y-auto divide-y divide-[var(--line-soft)]">
-                                    <div v-for="u in userAktifList" :key="'cw'+u.ID_Akun"
-                                        class="p-3 flex items-center gap-3">
+                                    <div v-for="u in userAktifList" :key="'cw'+u.ID_Akun" class="p-3 flex items-center gap-3">
                                         <div class="relative shrink-0">
-                                            <img v-if="u.Avatar" :src="u.Avatar"
-                                                class="w-9 h-9 rounded-full object-cover" alt="">
-                                            <div v-else
-                                                class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold"
+                                            <img v-if="u.Avatar" :src="u.Avatar" class="w-9 h-9 rounded-full object-cover" alt="">
+                                            <div v-else class="w-9 h-9 rounded-full grid place-items-center text-xs font-bold"
                                                 style="background:var(--sea-tint);color:var(--sea-700)">
                                                 {{ inisialDari(u.Nama || u.Email) }}
                                             </div>
-                                            <span class="absolute -bottom-0.5 -right-0.5"
-                                                :class="u.Online ? 'dot-on' : 'dot-off'"></span>
+                                            <span class="absolute -bottom-0.5 -right-0.5" :class="u.Online ? 'dot-on' : 'dot-off'"></span>
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-1.5">
                                                 <p class="font-semibold text-xs truncate">{{ u.Nama }}</p>
-                                                <span v-if="u.Role==='admin'"
-                                                    class="chip chip-ok text-[9px] py-0 px-1">Admin</span>
+                                                <span v-if="u.Role==='admin'" class="chip chip-ok text-[9px] py-0 px-1">Admin</span>
                                             </div>
-                                            <p class="t-meta text-[11px] truncate">Rumah {{ u.No_Rumah || '—' }} · <span
-                                                    :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{
-                                                    u.Online ? 'Online' : (u.Last_Aktif ? ('Aktif ' +
-                                                    tglPendek(u.Last_Aktif)) : 'Offline') }}</span></p>
+                                            <p class="t-meta text-[11px] truncate">Rumah {{ u.No_Rumah || '—' }} · <span :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{ u.Online ? 'Online' : (u.Last_Aktif ? ('Aktif ' + tglPendek(u.Last_Aktif)) : 'Offline') }}</span></p>
                                         </div>
                                     </div>
-                                    <p v-if="!userAktifList.length" class="text-center py-10 text-xs"
-                                        style="color:var(--muted)">Belum ada warga terdaftar.</p>
+                                    <p v-if="!userAktifList.length" class="text-center py-10 text-xs" style="color:var(--muted)">Belum ada warga terdaftar.</p>
                                 </div>
                             </div>
                         </div>
@@ -1190,9 +1149,7 @@
                                                 class="chip chip-ok text-[10px] py-0 px-1">Admin</span>
                                         </div>
                                         <p class="t-meta text-xs truncate">Rumah {{ u.No_Rumah || '—' }} · <span
-                                                :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{
-                                                u.Online ? 'Online' : (u.Last_Aktif ? ('Aktif ' +
-                                                tglPendek(u.Last_Aktif)) : 'Offline') }}</span></p>
+                                                :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{ u.Online ? 'Online' : (u.Last_Aktif ? ('Aktif ' + tglPendek(u.Last_Aktif)) : 'Offline') }}</span></p>
                                     </div>
                                     <button v-if="u.Role!=='admin'" @click="bukaChatWarga(u.Email)"
                                         class="icon-btn shrink-0" title="Kirim Pesan">
@@ -1334,8 +1291,7 @@
                                         <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                             rupiah(t.Jumlah) }}</p>
                                     </div>
-                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
-                                        penanggung jawab' }}</p>
+                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
                                     <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                         t.Keterangan }}</p>
                                     <div class="flex items-center gap-1 mt-3 pt-3"
@@ -1845,10 +1801,8 @@
 
                                 <div class="panel p-5">
                                     <h3 class="font-bold mb-2">Status integrasi</h3>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway
-                                        WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login
-                                        Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -2225,8 +2179,7 @@
         <div v-if="waModal" class="overlay no-print" style="z-index:88">
             <div class="modal">
                 <div class="grabber"></div>
-                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat
-                    WhatsApp' }}</h3>
+                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat WhatsApp' }}</h3>
                 <p class="text-sm mb-3" style="color:var(--muted)">{{ waModal.message }}</p>
                 <pre class="text-xs whitespace-pre-wrap rounded-xl p-3 max-h-56 overflow-y-auto"
                     style="background:var(--card-2);font-family:ui-monospace,monospace">{{ waModal.pesan }}</pre>

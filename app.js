@@ -1,10 +1,11 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s6q4uarLGWn95_m9mTiU2w32g94LGSX2aa2hTVSaRXbxn/exec";
 
 /* ============================================================
-   KAS PERUMAHAN BLOK L/M — klien v6
-   Fitur baru: Chat Warga ↔ Warga (bendahara + sesama warga).
-   FIX: fullscreen chat di HP, scroll area chat yang macet.
-   ============================================================ */
+           KAS PERUMAHAN BLOK L/M — klien v5
+           Perbaikan: badge notifikasi hidup di semua menu, chat warga
+           punya badge, chat bendahara satu panel di ponsel, tata letak
+           mobile-first, bug hapus foto album.
+           ============================================================ */
 
 const PREFIX_DATA = 'kaslm_c::';
 const PREFIX_WAKTU = 'kaslm_w::';
@@ -100,10 +101,6 @@ function mulaiAplikasi() {
 
                 chatList: [], chatSearch: '', qChat: '', chatAktif: null, chatPesan: [], chatInput: '',
                 chatAdminOnline: false, chatLampiranUrl: '', chatLampiran: null, chatPrevPage: 'beranda',
-
-                /* CHAT WARGA ↔ WARGA */
-                kontakList: [], kontakSearch: '', qKontak: '',
-
                 userAktifList: [], totalOnline: 0,
                 _pollChatTimer: null, _heartbeatTimer: null, _notifTimer: null,
 
@@ -127,13 +124,12 @@ function mulaiAplikasi() {
 
         computed: {
             isAdmin() { return this.profil && this.profil.Role === 'admin'; },
-
-            /* Mode layar penuh untuk chat di mobile: aktif ketika ada percakapan
-               yang sedang dibuka (bendahara memilih warga, atau warga membuka
-               kontak). Saat hanya melihat daftar, appbar + tab bar tetap tampil. */
+            /* Mode layar penuh untuk chat di mobile: sembunyikan appbar + tab bar
+               selama warga/bendahara sedang membuka percakapan, sampai dia menekan
+               tombol kembali. */
             chatFullscreen() {
                 if (this.page !== 'chat') return false;
-                return !!this.chatAktif;
+                return this.isAdmin ? !!this.chatAktif : true;
             },
             menuAktif() { return this.isAdmin ? this.menuAdmin : this.menuWarga; },
             bottomNav() {
@@ -193,14 +189,6 @@ function mulaiAplikasi() {
                 if (!q) return this.chatList;
                 return this.chatList.filter(c => (c.Nama_Warga || '').toLowerCase().includes(q) || (c.No_Rumah || '').toLowerCase().includes(q));
             },
-            /* Daftar kontak warga (bendahara + sesama warga) */
-            kontakFiltered() {
-                const q = this.qKontak;
-                if (!q) return this.kontakList;
-                return this.kontakList.filter(c =>
-                    (c.Nama || '').toLowerCase().includes(q) ||
-                    (c.No_Rumah || '').toLowerCase().includes(q));
-            },
             pindahTampil() {
                 if (!this.pindahFilter) return this.pindahList;
                 return this.pindahList.filter(p => p.Status === this.pindahFilter);
@@ -217,7 +205,7 @@ function mulaiAplikasi() {
                             this.loading = false;
                             this.pendingCalls = 0;
                         }
-                    }, 4000);
+                    }, 4000); // Otomatis tutup spinner maksimal 4 detik agar tidak pernah macet
                 } else {
                     clearTimeout(this._loadingWatchdog);
                 }
@@ -226,7 +214,6 @@ function mulaiAplikasi() {
             statusSearch(v) { this.tunda('qStatus', () => { this.qStatus = (v || '').toLowerCase().trim(); }); },
             akunSearch(v) { this.tunda('qAkun', () => { this.qAkun = (v || '').toLowerCase().trim(); }); },
             chatSearch(v) { this.tunda('qChat', () => { this.qChat = (v || '').toLowerCase().trim(); }); },
-            kontakSearch(v) { this.tunda('qKontak', () => { this.qKontak = (v || '').toLowerCase().trim(); }); },
             tabTrx() { this.limitMasuk = 100; this.limitKeluar = 100; },
             tabLap(v) {
                 if (v === 'tahunan') this.$nextTick(() => this.gambarChartTahunan());
@@ -261,6 +248,7 @@ function mulaiAplikasi() {
             tunda(key, fn, ms) { clearTimeout(this._timers[key]); this._timers[key] = setTimeout(fn, ms || 200); },
             jadwalkanIkon() { clearTimeout(this._ikonTimer); this._ikonTimer = setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 60); },
             printPage() { window.print(); },
+            // toggleDark() { this.dark = !this.dark; document.documentElement.classList.toggle('dark', this.dark); },
             bacaTemaLokal() {
                 try {
                     const t = localStorage.getItem('kaslm_tema');
@@ -281,6 +269,7 @@ function mulaiAplikasi() {
                 const tema = this.dark ? 'gelap' : 'terang';
                 this.simpanTemaLokal(tema);
                 this.formProfil.Tema = tema;
+                // Simpan ke server kalau sudah login
                 if (this.token && this.profil && !this.profil.ViaPin) {
                     clearTimeout(this._simpanTemaTimer);
                     this._simpanTemaTimer = setTimeout(() => {
@@ -401,6 +390,7 @@ function mulaiAplikasi() {
                         this.akhirCall();
                         const msg = (err && err.message) || 'Terjadi kesalahan.';
                         this.toast(msg, 'error');
+                        // no auto logout on error
                         throw err;
                     });
             },
@@ -451,6 +441,7 @@ function mulaiAplikasi() {
                     } catch (err) {
                         const msg = (err && err.message) || 'Terjadi kesalahan.';
                         this.toast(msg, 'error');
+                        // no auto logout on error
                         throw err;
                     } finally { this.akhirCall(); }
                 }
@@ -498,6 +489,7 @@ function mulaiAplikasi() {
                 };
                 Object.keys(peta).forEach(k => { if (peta[k] !== undefined && peta[k] !== null) this.tulisCache(k, peta[k]); });
 
+                // Langsung apply ke state Vue agar halaman tidak kosong
                 if (this.isAdmin) {
                     if (Array.isArray(b.akun)) this.akunList = b.akun;
                     if (Array.isArray(b.permintaanRumah)) this.permintaanRumah = b.permintaanRumah;
@@ -523,6 +515,7 @@ function mulaiAplikasi() {
                 if (pubLama) this.publik = pubLama;
                 const t = this.ambilToken();
 
+                // Muat data publik di latar belakang tanpa memblokir layar
                 this.jalankan('getPengaturanPublik', []).then(pub => {
                     if (pub) { this.publik = pub; this.tulisCache('pub', pub); }
                 }).catch(() => { });
@@ -533,6 +526,7 @@ function mulaiAplikasi() {
                     return;
                 }
 
+                // Gunakan cache profil lokal terlebih dahulu agar langsung masuk instan
                 const profilCache = this.bacaCache('profil_saya');
                 if (profilCache) {
                     this.token = t;
@@ -597,6 +591,7 @@ function mulaiAplikasi() {
                 if (p.Status === 'Aktif') {
                     const defaultPage = this.isAdmin ? 'dashboard' : 'beranda';
                     const validPages = this.menuAktif.map(m => m.key);
+                    // FIX: selalu reset ke default kalau page tidak valid untuk role ini
                     if (!validPages.includes(this.page)) this.page = defaultPage;
                     await this.muatBundle();
                     await this.muatHalaman(this.page);
@@ -621,6 +616,7 @@ function mulaiAplikasi() {
                     this.formDaftar.No_Rumah = (this.formDaftar.Blok + '-' + this.formDaftar.Nomor).toUpperCase();
                 }
 
+                // Google Identity Services (GIS) Popup - mendukung multi-akun bebas error
                 if (window.google && window.google.accounts && window.google.accounts.oauth2) {
                     let clientId = (this.publik && this.publik.Google_Client_Id) || '';
                     if (!clientId) {
@@ -666,6 +662,7 @@ function mulaiAplikasi() {
                     return;
                 }
 
+                // Fallback ke alur lama
                 const res = await this.call('getAuthUrl');
                 if (!res.ok) { this.toast(res.message, 'error'); return; }
                 this.authState = res.state;
@@ -714,7 +711,6 @@ function mulaiAplikasi() {
                 this.simpanToken(''); this.bersihkanCache();
                 this.token = null; this.profil = null; this.page = 'dashboard';
                 this.lightbox = null; this.chatAktif = null; this.chatPesan = [];
-                this.kontakList = []; this.qKontak = ''; this.kontakSearch = '';
                 this.notif = { transaksi: 0, akun: 0, pindah: 0, chat: 0 };
             },
             pilihFotoDaftar(e) {
@@ -750,16 +746,13 @@ function mulaiAplikasi() {
                 this.page = key; this.moreSheet = false;
                 window.scrollTo({ top: 0 });
                 this.muatHalaman(key);
-                if (key === 'chat') {
-                    if (this.isAdmin) this.$nextTick(() => this.afterMasukChat());
-                    else this.$nextTick(() => this.muatKontakWarga());
-                }
+                if (key === 'chat') this.$nextTick(() => this.afterMasukChat());
             },
             /* Tombol "kembali" saat chat sedang layar penuh (mobile).
-               Bendahara: tutup percakapan (kembali ke daftar warga).
-               Warga: tutup percakapan juga (kembali ke daftar kontak). */
+               Bendahara: tutup percakapan yang sedang dibuka (kembali ke daftar warga).
+               Warga: kembali ke halaman sebelum membuka chat. */
             kembaliDariChat() {
-                if (this.chatAktif) { this.chatAktif = null; return; }
+                if (this.isAdmin) { this.chatAktif = null; return; }
                 this.goTo(this.chatPrevPage || 'beranda');
             },
             muatUlangHalaman() { this.muatHalaman(this.page, true); this.muatNotif(); this.toast('Mengambil data terbaru.', 'info'); },
@@ -809,10 +802,7 @@ function mulaiAplikasi() {
                     if (key === 'riwayat') await this.muatRiwayat(paksa);
                     if (key === 'galeri') await this.muatGaleri(paksa);
                     if (key === 'profil') await this.ambilDenganCache('pindahSaya:' + email, 'getPengajuanPindahSaya', [this.token], r => { this.pindahSaya = r; }, paksa);
-                    if (key === 'chat') {
-                        await this.muatKontakWarga();
-                        this.startPollingChat();
-                    }
+                    if (key === 'chat') { await this.muatChatWarga(true); this.startPollingChat(); }
                 }
             },
 
@@ -1051,6 +1041,7 @@ function mulaiAplikasi() {
                     r.readAsDataURL(file);
                 });
             },
+            /* Nama berbeda dari hapus foto profil supaya tidak saling menimpa. */
             async hapusFotoAlbum(alb, f) {
                 if (!confirm('Hapus foto ini?')) return;
                 try { await this.call('deleteFotoGaleri', this.token, f.ID_Foto); } catch (e) { return; }
@@ -1061,7 +1052,7 @@ function mulaiAplikasi() {
             nextFoto() { if (!this.lightbox) return; const n = this.lightbox.album.Foto.length; this.lightbox.index = (this.lightbox.index + 1) % n; },
             prevFoto() { if (!this.lightbox) return; const n = this.lightbox.album.Foto.length; this.lightbox.index = (this.lightbox.index - 1 + n) % n; },
 
-            /* ---------- chat: util ---------- */
+            /* ---------- chat ---------- */
             afterMasukChat() {
                 this.$nextTick(() => this.scrollChat());
                 if (this.isAdmin && !this.chatAktif && this.chatList.length && window.innerWidth >= 1024) {
@@ -1069,13 +1060,6 @@ function mulaiAplikasi() {
                 }
             },
             scrollChat() { const el = this.$refs.chatBox; if (el) el.scrollTop = el.scrollHeight; },
-            isPesanSaya(m) {
-                if (!this.profil) return false;
-                if (this.isAdmin) return m.Role_Pengirim === 'admin';
-                return m.Role_Pengirim === 'warga' || m.Role_Pengirim === 'saya';
-            },
-
-            /* ---------- chat: bendahara ↔ warga ---------- */
             async bukaChatWarga(emailWarga) {
                 if (!emailWarga) return;
                 if (this.page !== 'chat') {
@@ -1083,19 +1067,14 @@ function mulaiAplikasi() {
                 }
                 try {
                     const r = await this.jalankan('getChatAdminDenganWarga', [this.token, emailWarga]);
-                    const item = (this.chatList && this.chatList.find(c =>
-                        (c.Email_Warga || '').toLowerCase() === (emailWarga || '').toLowerCase())) || {};
+                    const item = (this.chatList && this.chatList.find(c => (c.Email_Warga || '').toLowerCase() === (emailWarga || '').toLowerCase())) || {};
                     this.chatAktif = {
-                        Email: emailWarga,
                         Email_Warga: emailWarga,
-                        Nama: item.Nama_Warga || (r && r.Nama_Warga) || emailWarga,
                         Nama_Warga: item.Nama_Warga || (r && r.Nama_Warga) || emailWarga,
                         No_Rumah: item.No_Rumah || (r && r.No_Rumah) || '',
                         Avatar: item.Avatar || (r && r.Avatar) || '',
                         Online: r ? r.Online : false,
-                        Last_Aktif: r ? r.Last_Aktif : '',
-                        isAdmin: false,
-                        Role: 'warga'
+                        Last_Aktif: r ? r.Last_Aktif : ''
                     };
                     this.chatPesan = (r && r.Pesan) || [];
                     await this.tandaiDibaca();
@@ -1104,81 +1083,37 @@ function mulaiAplikasi() {
                     console.error('Error bukaChatWarga:', e);
                 }
             },
-
-            /* ---------- chat: warga ↔ bendahara / warga lain ---------- */
-            async muatKontakWarga() {
-                if (!this.token) return;
+            async muatChatWarga(pertamaKali) {
                 try {
-                    this.kontakList = await this.jalankan('getKontakWarga', [this.token]);
-                } catch (e) { console.error('muatKontakWarga', e); }
-            },
-            async bukaKontak(c) {
-                if (!c) return;
-                this.chatAktif = {
-                    Email: c.Email,
-                    Nama: c.Nama,
-                    No_Rumah: c.No_Rumah,
-                    Avatar: c.Avatar,
-                    Online: c.Online,
-                    Last_Aktif: c.Last_Aktif,
-                    isAdmin: c.isAdmin,
-                    Role: c.Role,
-                    ID_Percakapan: c.ID_Percakapan
-                };
-                try {
-                    const r = await this.jalankan('getChatWargaDenganWarga', [this.token, c.Email]);
-                    this.chatPesan = (r && r.Pesan) || [];
-                    if (r) {
-                        this.chatAktif.Online = r.Online;
-                        this.chatAktif.Last_Aktif = r.Last_Aktif;
+                    const [pesan, st, userAktif] = await Promise.all([
+                        this.jalankan('getChatPercakapanSaya', [this.token]),
+                        this.jalankan('getChatAdminDenganWarga', [this.token, 'admin']),
+                        this.jalankan('getUserAktifList', [this.token]).catch(() => [])
+                    ]);
+                    const berubah = pertamaKali || (pesan || []).length !== this.chatPesan.length;
+                    this.chatPesan = pesan || [];
+                    this.chatAdminOnline = !!(st && st.Online);
+                    if (Array.isArray(userAktif)) {
+                        this.userAktifList = userAktif;
+                        this.totalOnline = userAktif.filter(u => u.Online).length;
                     }
-                    await this.tandaiDibaca();
-                    this.$nextTick(() => this.scrollChat());
-                    this.muatKontakWarga();
-                    this.muatNotif();
-                } catch (e) { console.error('bukaKontak', e); }
-            },
-            async muatChatWargaAktif() {
-                if (!this.chatAktif) return;
-                try {
-                    const r = await this.jalankan('getChatWargaDenganWarga', [this.token, this.chatAktif.Email]);
-                    const berubah = (r.Pesan || []).length !== this.chatPesan.length;
-                    this.chatPesan = (r && r.Pesan) || [];
-                    this.chatAktif.Online = r ? r.Online : false;
-                    this.chatAktif.Last_Aktif = r ? r.Last_Aktif : '';
-                    if (berubah) {
-                        await this.tandaiDibaca();
-                        this.$nextTick(() => this.scrollChat());
-                    }
+                    if (berubah) this.$nextTick(() => this.scrollChat());
+                    if (this.chatPesan.some(m => m.Role_Pengirim === 'admin' && !m.Status_Baca)) await this.tandaiDibaca();
                 } catch (e) { }
             },
-
-            /* ---------- chat: umum ---------- */
             async tandaiDibaca() {
                 if (!this.chatPesan || !this.chatPesan.length) return;
                 const belum = this.chatPesan.filter(m => !m.Status_Baca);
                 if (!belum.length) return;
-
-                let idPer = '';
-                if (this.isAdmin) {
-                    const target = this.chatAktif && (this.chatAktif.Email || this.chatAktif.Email_Warga);
-                    if (!target) return;
-                    idPer = 'CW-' + String(target).toLowerCase();
-                } else {
-                    if (!this.chatAktif) return;
-                    idPer = this.chatAktif.ID_Percakapan ||
-                        (this.chatAktif.isAdmin
-                            ? ('CW-' + String(this.profil.Email).toLowerCase())
-                            : '');
-                }
-                if (!idPer) return;
-
+                const idPer = this.isAdmin
+                    ? 'CW-' + String(this.chatAktif.Email_Warga).toLowerCase()
+                    : 'CW-' + String(this.profil.Email).toLowerCase();
                 try { await this.jalankan('tandaiChatDibaca', [this.token, idPer]); } catch (e) { }
                 this.chatPesan.forEach(m => { if (!m.Status_Baca) m.Status_Baca = true; });
                 this.notif.chat = 0;
                 if (!this.isAdmin) this.warga.chatBelumDibaca = 0;
                 if (this.isAdmin && this.dash) this.dash.chatBelumDibaca = 0;
-                this.muatNotif();
+                if (this.isAdmin) this.muatNotif();
             },
             startPollingChat() {
                 this.stopPollingChat();
@@ -1188,8 +1123,7 @@ function mulaiAplikasi() {
                         if (this.chatAktif) this.refreshChatAdmin();
                         this.refreshChatListAdmin();
                     } else {
-                        if (this.chatAktif) this.muatChatWargaAktif();
-                        this.muatKontakWarga();
+                        this.muatChatWarga(false);
                     }
                 }, 4000);
             },
@@ -1197,7 +1131,7 @@ function mulaiAplikasi() {
             async refreshChatAdmin() {
                 if (!this.chatAktif) return;
                 try {
-                    const r = await this.jalankan('getChatAdminDenganWarga', [this.token, this.chatAktif.Email]);
+                    const r = await this.jalankan('getChatAdminDenganWarga', [this.token, this.chatAktif.Email_Warga]);
                     const berubah = (r.Pesan || []).length !== this.chatPesan.length;
                     this.chatPesan = r.Pesan || [];
                     this.chatAktif.Online = r.Online;
@@ -1240,13 +1174,13 @@ function mulaiAplikasi() {
             async kirimChat() {
                 const isi = (this.chatInput || '').trim();
                 const lampiran = this.chatLampiran;
-                if (!isi && !lampiran) return;
-                if (!this.chatAktif) {
-                    this.toast('Pilih kontak terlebih dahulu.', 'error');
+                if (!isi && !lampiran && !this.chatLampiranUrl) return;
+                if (this.isAdmin && !this.chatAktif) {
+                    this.toast('Pilih warga terlebih dahulu.', 'error');
                     return;
                 }
 
-                let urlLampiran = '';
+                let urlLampiran = this.chatLampiranUrl || '';
                 if (lampiran) {
                     this.loading = true;
                     this.loadingText = 'Mengunggah lampiran…';
@@ -1266,11 +1200,8 @@ function mulaiAplikasi() {
                     }
                 }
 
-                const payload = {
-                    Isi_Pesan: isi,
-                    URL_Lampiran: urlLampiran,
-                    Email_Lawan: this.chatAktif.Email
-                };
+                const payload = { Isi_Pesan: isi, URL_Lampiran: urlLampiran };
+                if (this.isAdmin && this.chatAktif) payload.Email_Lawan = this.chatAktif.Email_Warga;
                 try {
                     await this.jalankan('kirimPesanChat', [this.token, payload]);
                 } catch (e) {
@@ -1279,21 +1210,14 @@ function mulaiAplikasi() {
                 }
 
                 this.chatInput = '';
+                this.chatLampiranUrl = '';
                 this.hapusLampiranChat();
                 this.$nextTick(() => {
                     const ta = this.$el.querySelector('textarea.field');
                     if (ta) ta.style.height = 'auto';
                 });
-
-                if (this.isAdmin) {
-                    const r = await this.jalankan('getChatAdminDenganWarga', [this.token, this.chatAktif.Email]);
-                    this.chatPesan = (r && r.Pesan) || [];
-                    await this.refreshChatListAdmin();
-                } else {
-                    const r = await this.jalankan('getChatWargaDenganWarga', [this.token, this.chatAktif.Email]);
-                    this.chatPesan = (r && r.Pesan) || [];
-                    this.muatKontakWarga();
-                }
+                if (this.isAdmin) await this.refreshChatAdmin();
+                else await this.muatChatWarga(false);
                 this.$nextTick(() => this.scrollChat());
             },
             autoResizeTA(e) {

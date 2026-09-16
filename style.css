@@ -65,10 +65,30 @@
     -webkit-tap-highlight-color: transparent
 }
 
+/* ===================================================================
+   FIX #1 — SCROLL ROOT
+   Sebelumnya: html,body{overscroll-behavior-y:none;overflow-x:clip}
+   - overflow-x:clip pada body membuat body jadi scroll container kedua
+   - overscroll-behavior-y:none di body mematikan scroll chaining
+   Solusi: pindahkan overflow-x ke html saja, biarkan body default,
+   dan aktifkan -webkit-overflow-scrolling agar momentum iOS mulus.
+   =================================================================== */
 html {
     overflow-x: clip;
+    /* FIX: bukan pada body */
     overscroll-behavior-x: none;
+    /* FIX: hanya sumbu x */
     -webkit-text-size-adjust: 100%;
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    /* FIX: dvh lebih akurat di mobile */
+    overflow-x: clip;
+    /* FIX: clip, bukan hidden */
+    max-width: 100%;
+    /* overscroll-behavior-y:none DIHAPUS — biarkan default (auto) */
 }
 
 body {
@@ -79,10 +99,6 @@ body {
     margin: 0;
     font-size: 15px;
     line-height: 1.55;
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow-x: clip;
-    max-width: 100%;
 }
 
 [v-cloak] {
@@ -499,6 +515,11 @@ input[type=checkbox] {
     color: #06241F
 }
 
+/* ===================================================================
+   FIX #2 — Horizontal scroll strip
+   Tambahkan overscroll-behavior-x:contain agar swipe di strip tidak
+   memicu back/forward gesture browser.
+   =================================================================== */
 .scroll-x {
     display: flex;
     gap: .5rem;
@@ -506,6 +527,7 @@ input[type=checkbox] {
     padding-bottom: .25rem;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
+    /* FIX */
     scrollbar-width: none;
 }
 
@@ -540,10 +562,19 @@ table.tbl tbody tr:hover td {
     background: var(--card-2)
 }
 
+/* ===================================================================
+   FIX #3 — Wrapper overflow-x-auto pada tabel
+   Tambahkan overscroll-behavior-x:contain.
+   =================================================================== */
 .overflow-x-auto {
     overscroll-behavior-x: contain
 }
 
+/* ===================================================================
+   FIX #4 — Wrapper overflow-y-auto (chat, modal, dll)
+   Tambahkan overscroll-behavior:contain agar scroll chaining hanya
+   terjadi di dalam elemen, bukan menular ke seluruh halaman.
+   =================================================================== */
 .overflow-y-auto {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -617,6 +648,11 @@ table.tbl tbody tr:hover td {
     color: var(--sea-700)
 }
 
+/* ===================================================================
+   FIX #5 — Backdrop-filter terlalu berat
+   Turunkan blur dari 14px → 8px agar scroll tidak patah-patah di HP
+   mid-range. Tambahkan -webkit- prefix untuk Safari iOS.
+   =================================================================== */
 .tabbar {
     position: fixed;
     bottom: 0;
@@ -625,7 +661,9 @@ table.tbl tbody tr:hover td {
     z-index: 40;
     background: color-mix(in srgb, var(--card) 92%, transparent);
     -webkit-backdrop-filter: blur(8px);
+    /* FIX */
     backdrop-filter: blur(8px);
+    /* FIX */
     border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom);
 }
@@ -677,7 +715,9 @@ table.tbl tbody tr:hover td {
     z-index: 30;
     background: color-mix(in srgb, var(--card) 88%, transparent);
     -webkit-backdrop-filter: blur(8px);
+    /* FIX */
     backdrop-filter: blur(8px);
+    /* FIX */
     border-bottom: 1px solid var(--line);
     padding-top: env(safe-area-inset-top);
 }
@@ -707,6 +747,10 @@ table.tbl tbody tr:hover td {
     justify-content: center
 }
 
+/* ===================================================================
+   FIX #6 — Modal scroll di mobile
+   Gunakan dvh, bukan vh, supaya address bar browser tidak memotong.
+   =================================================================== */
 .modal {
     width: 100%;
     background: var(--card);
@@ -714,9 +758,12 @@ table.tbl tbody tr:hover td {
     padding: 1.4rem 1.25rem calc(1.4rem + env(safe-area-inset-bottom));
     max-height: 92vh;
     max-height: 92dvh;
+    /* FIX */
     overflow-y: auto;
     overscroll-behavior: contain;
+    /* FIX */
     -webkit-overflow-scrolling: touch;
+    /* FIX */
 }
 
 @media (min-width:640px) {
@@ -814,7 +861,7 @@ table.tbl tbody tr:hover td {
 }
 
 .chat-panel-box {
-    display: flex;
+    /* display: flex; */
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
@@ -840,28 +887,6 @@ table.tbl tbody tr:hover td {
     }
 }
 
-/* ===================================================================
-   FIX: Area chat scroll — sebelumnya pakai justify-content:flex-end
-   pada flex column, yang menyebabkan overflow tidak bisa di-scroll.
-   Diganti dengan ::before margin-top:auto yang aman untuk scroll.
-   =================================================================== */
-.chat-bg {
-    background: var(--card-2);
-    min-height: 0;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.chat-bg::before {
-    content: '';
-    margin-top: auto;
-    flex-shrink: 0;
-}
-
 .bubble-in {
     background: var(--card);
     border: 1px solid var(--line);
@@ -880,48 +905,69 @@ table.tbl tbody tr:hover td {
 }
 
 /* ===================================================================
-   FIX FULLSCREEN: paksa seluruh viewport pas saat chat terbuka di
-   mobile. Root #app sebelumnya bisa scroll & wrapper .min-h-screen
-   (100vh) lebih besar dari 100dvh.
+   FIX #7 — Chat area
+   `flex:1 + overflow-y:auto` WAJIB disertai `min-height:0` pada
+   elemen itu sendiri agar flexbox mengizinkannya mengecil. Tanpa
+   ini, area chat tidak bisa di-scroll karena tinggi flex-basis
+   otomatis = konten.
+   =================================================================== */
+.chat-bg {
+    background: var(--card-2);
+    min-height: 0;
+    /* FIX */
+    overscroll-behavior: contain;
+    /* FIX */
+    -webkit-overflow-scrolling: touch;
+    /* FIX */
+    /* FIX #10 — Pesan menempel ke bawah seperti WhatsApp.
+       Tanpa ini, saat pesan sedikit (belum memenuhi tinggi kontainer),
+       bubble menumpuk dari atas dengan ruang kosong di bawah, bukan
+       menempel ke dasar seperti chat pada umumnya. */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+/* ===================================================================
+   FIX #8 — Panel chat mobile
+   Panel `max-height:78vh` pada HP hampir setinggi viewport, jadi
+   halaman luar tidak bisa di-scroll. Beri tinggi eksplisit supaya
+   hanya satu area yang scroll pada satu waktu.
    =================================================================== */
 @media (max-width: 1023px) {
-    .chat-fullscreen {
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-        overflow: hidden !important;
+    .chat-panel {
+        height: calc(100dvh - 76px - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+        max-height: none;
     }
+}
 
+/* ===================================================================
+   FIX #9 — Chat layar penuh di mobile
+   Saat percakapan chat dibuka (warga: selalu; bendahara: saat memilih
+   satu warga), sembunyikan appbar & tab bar bawah supaya area chat
+   memakai seluruh tinggi layar. Kondisi ini dikontrol lewat class
+   `.chat-fullscreen` pada #app (computed `chatFullscreen` di app.js),
+   dan otomatis kembali normal saat tombol "kembali" ditekan.
+   =================================================================== */
+@media (max-width: 1023px) {
     .chat-fullscreen .appbar,
     .chat-fullscreen .tabbar {
         display: none !important;
     }
 
-    .chat-fullscreen>div.flex,
-    .chat-fullscreen>div.flex>div.flex-1 {
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-        overflow: hidden !important;
-    }
-
     .chat-fullscreen main {
         padding: 0 !important;
         margin: 0 !important;
-        overflow: hidden !important;
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-    }
-
-    .chat-fullscreen .chat-page-main {
-        padding: 0 !important;
-        gap: 0 !important;
-        height: 100dvh !important;
     }
 
     .chat-fullscreen .chat-panel-box {
         height: 100dvh !important;
         max-height: 100dvh !important;
         border-radius: 0 !important;
-        border: none !important;
+    }
+
+    .chat-fullscreen .chat-page-main {
+        padding: 0 !important;
     }
 }
 
@@ -969,7 +1015,9 @@ table.tbl tbody tr:hover td {
     padding: 1rem;
     overflow-y: auto;
     overscroll-behavior: contain;
+    /* FIX */
     -webkit-overflow-scrolling: touch;
+    /* FIX */
 }
 
 .receipt {
@@ -1028,6 +1076,8 @@ table.tbl tbody tr:hover td {
         border: none !important
     }
 }
+
+
 
 @keyframes bspin {
     to {
