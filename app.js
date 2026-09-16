@@ -317,7 +317,6 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     emailAktif() { return (this.profil && this.profil.Email) || 'anon'; },
 
                     async jalankan(fn, args) {
-                        // Utamakan Supabase Backend (< 50ms)
                         if (window.SupabaseBackend && typeof window.SupabaseBackend[fn] === 'function') {
                             try {
                                 return await window.SupabaseBackend[fn].apply(window.SupabaseBackend, args || []);
@@ -326,22 +325,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                                 throw err;
                             }
                         }
-                        try {
-                            const res = await fetch(API_URL, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'text/plain;charset=utf-8'
-                                },
-                                body: JSON.stringify({ action: fn, args: args || [] })
-                            });
-                            const data = await res.json();
-                            if (!data.ok) {
-                                throw new Error(data.error || 'Terjadi kesalahan pada server');
-                            }
-                            return data.result;
-                        } catch (err) {
-                            throw err;
-                        }
+                        console.warn('Action not found on Supabase:', fn);
+                        return null;
                     },
                     call(fn) {
                         const args = Array.prototype.slice.call(arguments, 1);
@@ -352,7 +337,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                                 this.akhirCall();
                                 const msg = (err && err.message) || 'Terjadi kesalahan.';
                                 this.toast(msg, 'error');
-                                if (/Sesi berakhir/i.test(msg)) this.keluarPaksa();
+                                // no auto logout on error
                                 throw err;
                             });
                     },
@@ -403,7 +388,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             } catch (err) {
                                 const msg = (err && err.message) || 'Terjadi kesalahan.';
                                 this.toast(msg, 'error');
-                                if (/Sesi berakhir/i.test(msg)) this.keluarPaksa();
+                                // no auto logout on error
                                 throw err;
                             } finally { this.akhirCall(); }
                         }

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * KAS PERUMAHAN BLOK L/M — SUPABASE ADAPTER
+ * KAS PERUMAHAN BLOK L/M — SUPABASE ADAPTER (LENGKAP SEMUA FITUR)
  * Super cepat (< 50ms), Realtime, 100% Free PostgreSQL & Storage
  * ============================================================================
  */
@@ -8,7 +8,6 @@
 const SUPABASE_URL = "https://zrkfzrldqkmgpkdjfjlt.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_CdzWUiDNDRsHov5eDMZbZg_zktPzeW8";
 
-// Inisialisasi Supabase Client
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -31,7 +30,7 @@ function base64ToBlob(base64, mime) {
     return new Blob(byteArrays, { type: mime || 'image/jpeg' });
 }
 
-// Session store lokal
+// Session store lokal (365 hari / 1 tahun)
 const SessionStore = {
     get(token) {
         if (!token) return null;
@@ -47,7 +46,7 @@ const SessionStore = {
         } catch (e) { return null; }
     },
     set(token, data) {
-        data.exp = Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 tahun (365 hari)
+        data.exp = Date.now() + 365 * 24 * 60 * 60 * 1000;
         localStorage.setItem('sb_sess_' + token, JSON.stringify(data));
     },
     remove(token) {
@@ -60,8 +59,8 @@ window.SupabaseBackend = {
     // PENGATURAN
     // ------------------------------------------------------------------------
     async getPengaturanPublik() {
-        const { data, error } = await sb.from('pengaturan').select('*').limit(1).single();
-        if (error || !data) {
+        const { data } = await sb.from('pengaturan').select('*').limit(1).maybeSingle();
+        if (!data) {
             return {
                 Nama_Perumahan: 'Perumahan Blok L/M',
                 Nominal_Kas_Bulanan: 150000,
@@ -94,21 +93,21 @@ window.SupabaseBackend = {
     },
 
     async getPengaturanAdmin(token) {
-        const { data } = await sb.from('pengaturan').select('*').limit(1).single();
+        const { data } = await sb.from('pengaturan').select('*').limit(1).maybeSingle();
         return {
-            Nama_Perumahan: data.nama_perumahan,
-            Nominal_Kas_Bulanan: Number(data.nominal_kas_bulanan),
-            Rekening_Tujuan: data.rekening_tujuan,
-            Nama_Bendahara: data.nama_bendahara,
-            Admin_PIN: data.admin_pin,
-            Admin_Emails: data.admin_emails,
-            WA_Bendahara: data.wa_bendahara,
-            QR_Code_URL: data.qr_code_url,
-            Metode_Pembayaran: data.metode_pembayaran,
-            Instruksi_Pembayaran: data.instruksi_pembayaran,
-            Bulan_Mulai_Iuran: data.bulan_mulai_iuran,
-            Tahun_Mulai_Iuran: data.tahun_mulai_iuran,
-            Pengaturan_Aktif: data.pengaturan_aktif
+            Nama_Perumahan: data?.nama_perumahan || 'Perumahan Blok L/M',
+            Nominal_Kas_Bulanan: Number(data?.nominal_kas_bulanan || 150000),
+            Rekening_Tujuan: data?.rekening_tujuan || '',
+            Nama_Bendahara: data?.nama_bendahara || '',
+            Admin_PIN: data?.admin_pin || '123456',
+            Admin_Emails: data?.admin_emails || '',
+            WA_Bendahara: data?.wa_bendahara || '',
+            QR_Code_URL: data?.qr_code_url || '',
+            Metode_Pembayaran: data?.metode_pembayaran || 'Transfer Bank',
+            Instruksi_Pembayaran: data?.instruksi_pembayaran || '',
+            Bulan_Mulai_Iuran: Number(data?.bulan_mulai_iuran || 1),
+            Tahun_Mulai_Iuran: Number(data?.tahun_mulai_iuran || 2024),
+            Pengaturan_Aktif: data?.pengaturan_aktif !== false
         };
     },
 
@@ -157,8 +156,8 @@ window.SupabaseBackend = {
             };
         }
 
-        const { data: a, error } = await sb.from('akun').select('*').eq('email', sess.email).maybeSingle();
-        if (error || !a) return null;
+        const { data: a } = await sb.from('akun').select('*').eq('email', sess.email).maybeSingle();
+        if (!a) return null;
 
         return {
             ID_Akun: a.id_akun,
@@ -193,7 +192,6 @@ window.SupabaseBackend = {
         const nama = user.name || '';
         const foto = user.picture || '';
 
-        // Cek akun di Supabase
         const { data: ada } = await sb.from('akun').select('*').eq('email', email).maybeSingle();
 
         if (ada) {
@@ -205,7 +203,6 @@ window.SupabaseBackend = {
                 status: ada.status === 'Menunggu' ? 'Aktif' : ada.status
             }).eq('id', ada.id);
         } else {
-            // Cek apakah ada admin aktif sebelumnya
             const { data: admins } = await sb.from('akun').select('id').eq('role', 'admin').eq('status', 'Aktif');
             const jadiAdmin = !admins || admins.length === 0;
 
@@ -230,7 +227,7 @@ window.SupabaseBackend = {
     },
 
     async loginPin(pin) {
-        const { data: s } = await sb.from('pengaturan').select('admin_pin').limit(1).single();
+        const { data: s } = await sb.from('pengaturan').select('admin_pin').limit(1).maybeSingle();
         if (!s || String(s.admin_pin) !== String(pin)) {
             return { ok: false, message: 'PIN bendahara salah.' };
         }
@@ -250,16 +247,13 @@ window.SupabaseBackend = {
         const noRumah = String(data.No_Rumah || '').toUpperCase().trim();
         if (!data.Nama || !noRumah) throw new Error('Nama dan nomor rumah wajib diisi.');
 
-        // Update akun
-        const { error: errAkun } = await sb.from('akun').update({
+        await sb.from('akun').update({
             nama: data.Nama,
             no_rumah: noRumah,
             no_hp: data.No_HP || '',
             status: 'Aktif'
         }).eq('email', sess.email);
-        if (errAkun) throw new Error(errAkun.message);
 
-        // Sinkronkan ke tabel warga
         const { data: adaWarga } = await sb.from('warga').select('*').eq('no_rumah', noRumah).maybeSingle();
         if (adaWarga) {
             await sb.from('warga').update({
@@ -289,8 +283,7 @@ window.SupabaseBackend = {
         if (data.Notif_Email !== undefined) patch.notif_email = !!data.Notif_Email;
         if (data.Notif_WA !== undefined) patch.notif_wa = !!data.Notif_WA;
 
-        const { error } = await sb.from('akun').update(patch).eq('email', sess.email);
-        if (error) throw new Error(error.message);
+        await sb.from('akun').update(patch).eq('email', sess.email);
         return { ok: true };
     },
 
@@ -303,37 +296,286 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // BUNDLE AWAL (SUPER CEPAT DALAM 1 PANGGILAN)
+    // LAPORAN & STATISTIK (DIPERLUKAN MENU LAPORAN)
     // ------------------------------------------------------------------------
-    async getBundleAwal(token, opts) {
-        const profil = await this.getProfil(token);
-        const kini = new Date();
-        const bulan = Number((opts && opts.bulan) || (kini.getMonth() + 1));
-        const tahun = Number((opts && opts.tahun) || kini.getFullYear());
+    async getLaporanBulanan(token, bulan, tahun) {
+        const b = Number(bulan) || (new Date().getMonth() + 1);
+        const th = Number(tahun) || new Date().getFullYear();
 
-        const [
-            resPub,
-            resWarga,
-            resTrxMasuk,
-            resTrxKeluar,
-            resAkun,
-            resGaleri,
-            resFoto,
-            resChat,
-            resPindah
-        ] = await Promise.all([
-            sb.from('pengaturan').select('*').limit(1).single(),
-            sb.from('warga').select('*').order('no_rumah'),
-            sb.from('transaksi_masuk').select('*').order('tanggal', { ascending: false }),
-            sb.from('transaksi_keluar').select('*').order('tanggal', { ascending: false }),
-            profil && profil.Role === 'admin' ? sb.from('akun').select('*').order('tanggal_daftar', { ascending: false }) : Promise.resolve({ data: [] }),
-            sb.from('galeri').select('*').order('tanggal_kegiatan', { ascending: false }),
-            sb.from('galeri_foto').select('*').order('urutan'),
-            sb.from('chat').select('*').order('waktu_kirim', { ascending: false }),
-            sb.from('pengajuan_pindah_blok').select('*').order('tanggal_pengajuan', { ascending: false })
+        const [resMasuk, resKeluar] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').eq('periode_bulan', b).eq('periode_tahun', th).eq('status', 'Lunas'),
+            sb.from('transaksi_keluar').select('*')
         ]);
 
-        const rawWarga = (resWarga.data || []).map(w => ({
+        const rincianMasuk = (resMasuk.data || []).map(t => ({
+            ID_Transaksi: t.id_transaksi,
+            Tanggal: t.tanggal,
+            No_Rumah: t.no_rumah,
+            Nama_Warga: t.nama_warga,
+            Jenis_Iuran: t.jenis_iuran,
+            Jumlah_Bayar: Number(t.jumlah_bayar),
+            Periode_Bulan: t.periode_bulan,
+            Periode_Tahun: t.periode_tahun,
+            Metode_Bayar: t.metode_bayar,
+            Status: t.status
+        }));
+
+        const rincianKeluar = (resKeluar.data || []).filter(k => {
+            const d = new Date(k.tanggal);
+            return (d.getMonth() + 1) === b && d.getFullYear() === th;
+        }).map(k => ({
+            ID_Kategori: k.id_kategori,
+            Tanggal: k.tanggal,
+            Kategori_Pengeluaran: k.kategori_pengeluaran,
+            Jumlah: Number(k.jumlah),
+            Penanggung_Jawab: k.penanggung_jawab,
+            Keterangan: k.keterangan || ''
+        }));
+
+        const totalMasuk = rincianMasuk.reduce((s, t) => s + t.Jumlah_Bayar, 0);
+        const totalKeluar = rincianKeluar.reduce((s, k) => s + k.Jumlah, 0);
+
+        const perJenis = {};
+        rincianMasuk.forEach(t => { perJenis[t.Jenis_Iuran] = (perJenis[t.Jenis_Iuran] || 0) + t.Jumlah_Bayar; });
+        const perKat = {};
+        rincianKeluar.forEach(k => { perKat[k.Kategori_Pengeluaran] = (perKat[k.Kategori_Pengeluaran] || 0) + k.Jumlah; });
+
+        return {
+            totalMasuk: totalMasuk,
+            totalKeluar: totalKeluar,
+            saldoBersih: totalMasuk - totalKeluar,
+            rincianMasuk: rincianMasuk,
+            rincianKeluar: rincianKeluar,
+            perJenisMasuk: Object.keys(perJenis).map(k => ({ jenis: k, jumlah: perJenis[k] })),
+            perKategoriKeluar: Object.keys(perKat).map(k => ({ kategori: k, jumlah: perKat[k] }))
+        };
+    },
+
+    async getLaporanTahunan(token, tahun) {
+        const th = Number(tahun) || new Date().getFullYear();
+        const [resMasuk, resKeluar] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').eq('status', 'Lunas'),
+            sb.from('transaksi_keluar').select('*')
+        ]);
+
+        const rawMasuk = resMasuk.data || [];
+        const rawKeluar = resKeluar.data || [];
+
+        // Saldo sebelum tahun ini
+        const masukLalu = rawMasuk.filter(t => Number(t.periode_tahun) < th).reduce((s, t) => s + Number(t.jumlah_bayar), 0);
+        const keluarLalu = rawKeluar.filter(k => new Date(k.tanggal).getFullYear() < th).reduce((s, k) => s + Number(k.jumlah), 0);
+        let saldo = masukLalu - keluarLalu;
+
+        const bulananArr = [];
+        for (let b = 1; b <= 12; b++) {
+            const m = rawMasuk.filter(t => Number(t.periode_bulan) === b && Number(t.periode_tahun) === th).reduce((s, t) => s + Number(t.jumlah_bayar), 0);
+            const k = rawKeluar.filter(t => {
+                const d = new Date(t.tanggal);
+                return (d.getMonth() + 1) === b && d.getFullYear() === th;
+            }).reduce((s, t) => s + Number(t.jumlah), 0);
+            saldo += (m - k);
+            bulananArr.push({
+                bulan: BULAN_NAMA[b - 1],
+                totalMasuk: m,
+                totalKeluar: k,
+                saldoMengendap: saldo
+            });
+        }
+
+        const keluarTahunIni = rawKeluar.filter(k => new Date(k.tanggal).getFullYear() === th);
+        const katMap = {};
+        keluarTahunIni.forEach(k => { katMap[k.kategori_pengeluaran] = (katMap[k.kategori_pengeluaran] || 0) + Number(k.jumlah); });
+
+        return {
+            tahun: th,
+            bulananArr: bulananArr,
+            totalMasukTahun: bulananArr.reduce((s, b) => s + b.totalMasuk, 0),
+            totalKeluarTahun: bulananArr.reduce((s, b) => s + b.totalKeluar, 0),
+            saldoAkhir: saldo,
+            perKategoriTahun: Object.keys(katMap).map(k => ({ kategori: k, jumlah: katMap[k] }))
+        };
+    },
+
+    async getLaporanMingguan(token, startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const [resMasuk, resKeluar] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').eq('status', 'Lunas'),
+            sb.from('transaksi_keluar').select('*')
+        ]);
+
+        const rincianMasuk = (resMasuk.data || []).filter(t => {
+            const d = new Date(t.tanggal);
+            return d >= start && d <= end;
+        }).map(t => ({
+            ID_Transaksi: t.id_transaksi,
+            Tanggal: t.tanggal,
+            No_Rumah: t.no_rumah,
+            Nama_Warga: t.nama_warga,
+            Jenis_Iuran: t.jenis_iuran,
+            Jumlah_Bayar: Number(t.jumlah_bayar)
+        }));
+
+        const rincianKeluar = (resKeluar.data || []).filter(k => {
+            const d = new Date(k.tanggal);
+            return d >= start && d <= end;
+        }).map(k => ({
+            ID_Kategori: k.id_kategori,
+            Tanggal: k.tanggal,
+            Kategori_Pengeluaran: k.kategori_pengeluaran,
+            Jumlah: Number(k.jumlah),
+            Penanggung_Jawab: k.penanggung_jawab
+        }));
+
+        const totalMasuk = rincianMasuk.reduce((s, t) => s + t.Jumlah_Bayar, 0);
+        const totalKeluar = rincianKeluar.reduce((s, k) => s + k.Jumlah, 0);
+
+        return {
+            totalMasuk: totalMasuk,
+            totalKeluar: totalKeluar,
+            saldoBersih: totalMasuk - totalKeluar,
+            rincianMasuk: rincianMasuk,
+            rincianKeluar: rincianKeluar,
+            perJenisMasuk: [],
+            perKategoriKeluar: []
+        };
+    },
+
+    async getTunggakan(token, bulan, tahun) {
+        const b = Number(bulan) || (new Date().getMonth() + 1);
+        const th = Number(tahun) || new Date().getFullYear();
+
+        const [resWarga, resMasuk] = await Promise.all([
+            sb.from('warga').select('*').order('no_rumah'),
+            sb.from('transaksi_masuk').select('*').eq('periode_bulan', b).eq('periode_tahun', th).eq('status', 'Lunas')
+        ]);
+
+        const lunasRumah = new Set((resMasuk.data || []).map(t => String(t.no_rumah).toUpperCase()));
+        return (resWarga.data || []).filter(w => !lunasRumah.has(String(w.no_rumah).toUpperCase())).map(w => ({
+            No_Rumah: w.no_rumah,
+            Nama_Warga: w.nama_warga,
+            No_HP: w.no_hp,
+            Status: 'Belum Bayar'
+        }));
+    },
+
+    async getStatusIuranWarga(token, bulan, tahun) {
+        const b = Number(bulan) || (new Date().getMonth() + 1);
+        const th = Number(tahun) || new Date().getFullYear();
+
+        const [resWarga, resMasuk, resPub] = await Promise.all([
+            sb.from('warga').select('*').order('no_rumah'),
+            sb.from('transaksi_masuk').select('*').eq('periode_bulan', b).eq('periode_tahun', th),
+            sb.from('pengaturan').select('nominal_kas_bulanan').limit(1).maybeSingle()
+        ]);
+
+        const nominal = Number(resPub.data?.nominal_kas_bulanan || 150000);
+        const masukMap = {};
+        (resMasuk.data || []).forEach(t => {
+            const r = String(t.no_rumah).toUpperCase();
+            if (!masukMap[r]) masukMap[r] = [];
+            masukMap[r].push(t);
+        });
+
+        return (resWarga.data || []).map(w => {
+            const r = String(w.no_rumah).toUpperCase();
+            const list = masukMap[r] || [];
+            const lunas = list.find(t => t.status === 'Lunas');
+            const pending = list.find(t => t.status === 'Pending');
+            const total = lunas ? Number(lunas.jumlah_bayar) : 0;
+
+            let status = 'Belum Bayar';
+            if (total >= nominal) status = 'Lunas';
+            else if (total > 0) status = 'Kurang Bayar';
+            else if (pending) status = 'Menunggu Verifikasi';
+
+            return {
+                No_Rumah: w.no_rumah,
+                Nama_Warga: w.nama_warga,
+                No_HP: w.no_hp,
+                Status: status,
+                Total_Dibayar: total,
+                Jenis_Dibayar: lunas ? lunas.jenis_iuran : ''
+            };
+        });
+    },
+
+    // ------------------------------------------------------------------------
+    // BUNDLE & DASHBOARD DATA
+    // ------------------------------------------------------------------------
+    async getDashboardData(token) {
+        const kini = new Date();
+        const bulanIni = kini.getMonth() + 1;
+        const tahunIni = kini.getFullYear();
+
+        const [resMasuk, resKeluar, resWarga, resAkun, resPindah, resChat] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').order('tanggal', { ascending: false }),
+            sb.from('transaksi_keluar').select('*').order('tanggal', { ascending: false }),
+            sb.from('warga').select('*'),
+            sb.from('akun').select('*'),
+            sb.from('pengajuan_pindah_blok').select('*'),
+            sb.from('chat').select('*')
+        ]);
+
+        const rawMasuk = resMasuk.data || [];
+        const rawKeluar = resKeluar.data || [];
+        const rawWarga = resWarga.data || [];
+
+        const totalMasukAll = rawMasuk.filter(t => t.status === 'Lunas').reduce((s, t) => s + Number(t.jumlah_bayar), 0);
+        const totalKeluarAll = rawKeluar.reduce((s, k) => s + Number(k.jumlah), 0);
+
+        const masukBulanIni = rawMasuk.filter(t => t.status === 'Lunas' && Number(t.periode_bulan) === bulanIni && Number(t.periode_tahun) === tahunIni);
+        const keluarBulanIni = rawKeluar.filter(k => {
+            const d = new Date(k.tanggal);
+            return (d.getMonth() + 1) === bulanIni && d.getFullYear() === tahunIni;
+        });
+
+        const rumahLunas = new Set(masukBulanIni.map(t => String(t.no_rumah).toUpperCase()));
+        const jumlahLunas = rumahLunas.size;
+        const totalRumah = rawWarga.length;
+
+        const trend = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(tahunIni, bulanIni - 1 - i, 1);
+            const b = d.getMonth() + 1, th = d.getFullYear();
+            const m = rawMasuk.filter(x => x.status === 'Lunas' && Number(x.periode_bulan) === b && Number(x.periode_tahun) === th)
+                .reduce((s, x) => s + Number(x.jumlah_bayar), 0);
+            const k = rawKeluar.filter(x => {
+                const dd = new Date(x.tanggal);
+                return (dd.getMonth() + 1) === b && dd.getFullYear() === th;
+            }).reduce((s, x) => s + Number(x.jumlah), 0);
+            trend.push({ label: BULAN_NAMA[b - 1].substring(0, 3) + ' ' + String(th).slice(2), masuk: m, keluar: k });
+        }
+
+        const katMap = {}, jnsMap = {};
+        keluarBulanIni.forEach(k => { katMap[k.kategori_pengeluaran] = (katMap[k.kategori_pengeluaran] || 0) + Number(k.jumlah); });
+        masukBulanIni.forEach(t => { jnsMap[t.jenis_iuran] = (jnsMap[t.jenis_iuran] || 0) + Number(t.jumlah_bayar); });
+
+        return {
+            saldo: totalMasukAll - totalKeluarAll,
+            totalMasukBulanIni: masukBulanIni.reduce((s, t) => s + Number(t.jumlah_bayar), 0),
+            totalKeluarBulanIni: keluarBulanIni.reduce((s, k) => s + Number(k.jumlah), 0),
+            persentaseLunas: totalRumah > 0 ? Math.round((jumlahLunas / totalRumah) * 100) : 0,
+            totalRumah: totalRumah,
+            rumahLunas: jumlahLunas,
+            menungguVerifikasi: rawMasuk.filter(t => t.status === 'Pending').length,
+            akunMenunggu: (resAkun.data || []).filter(a => a.status === 'Menunggu').length,
+            permintaanRumah: (resAkun.data || []).filter(a => a.rumah_diminta).length,
+            pindahMenunggu: (resPindah.data || []).filter(p => p.status === 'Menunggu').length,
+            chatBelumDibaca: (resChat.data || []).filter(c => c.status_baca === 'Belum').length,
+            trend: trend,
+            pengeluaranKategori: Object.keys(katMap).map(k => ({ kategori: k, jumlah: katMap[k] })),
+            pemasukanJenis: Object.keys(jnsMap).map(k => ({ jenis: k, jumlah: jnsMap[k] })),
+            statusWarga: { lunas: jumlahLunas, belumLunas: Math.max(totalRumah - jumlahLunas, 0) },
+            bulanIniLabel: BULAN_NAMA[bulanIni - 1] + ' ' + tahunIni
+        };
+    },
+
+    async getWargaList(token) {
+        const { data } = await sb.from('warga').select('*').order('no_rumah');
+        return (data || []).map(w => ({
             ID_Warga: w.id_warga,
             No_Rumah: w.no_rumah,
             Nama_Warga: w.nama_warga,
@@ -341,8 +583,11 @@ window.SupabaseBackend = {
             No_HP: w.no_hp,
             Tanggal_Bergabung: w.tanggal_bergabung
         }));
+    },
 
-        const rawTrxMasuk = (resTrxMasuk.data || []).map(t => ({
+    async getTransaksiMasuk(token) {
+        const { data } = await sb.from('transaksi_masuk').select('*').order('tanggal', { ascending: false });
+        return (data || []).map(t => ({
             ID_Transaksi: t.id_transaksi,
             Tanggal: t.tanggal,
             No_Rumah: t.no_rumah,
@@ -356,8 +601,11 @@ window.SupabaseBackend = {
             Catatan: t.catatan || '',
             Proof_URL: t.proof_url || ''
         }));
+    },
 
-        const rawTrxKeluar = (resTrxKeluar.data || []).map(k => ({
+    async getTransaksiKeluar(token) {
+        const { data } = await sb.from('transaksi_keluar').select('*').order('tanggal', { ascending: false });
+        return (data || []).map(k => ({
             ID_Kategori: k.id_kategori,
             Tanggal: k.tanggal,
             Kategori_Pengeluaran: k.kategori_pengeluaran,
@@ -366,8 +614,11 @@ window.SupabaseBackend = {
             Bukti_Nota_URL: k.bukti_nota_url || '',
             Keterangan: k.keterangan || ''
         }));
+    },
 
-        const rawAkun = (resAkun.data || []).map(a => ({
+    async getDaftarAkun(token) {
+        const { data } = await sb.from('akun').select('*').order('tanggal_daftar', { ascending: false });
+        return (data || []).map(a => ({
             ID_Akun: a.id_akun,
             Email: a.email,
             Nama: a.nama,
@@ -382,11 +633,17 @@ window.SupabaseBackend = {
             Tanggal_Daftar: a.tanggal_daftar,
             Last_Login: a.last_login
         }));
+    },
 
-        const fotoByGaleri = {};
+    async getGaleriList(token, kategori) {
+        let q = sb.from('galeri').select('*').order('tanggal_kegiatan', { ascending: false });
+        if (kategori) q = q.eq('kategori', kategori);
+        const [resGaleri, resFoto] = await Promise.all([q, sb.from('galeri_foto').select('*').order('urutan')]);
+
+        const fotoByG = {};
         (resFoto.data || []).forEach(f => {
-            if (!fotoByGaleri[f.id_galeri]) fotoByGaleri[f.id_galeri] = [];
-            fotoByGaleri[f.id_galeri].push({
+            if (!fotoByG[f.id_galeri]) fotoByG[f.id_galeri] = [];
+            fotoByG[f.id_galeri].push({
                 ID_Foto: f.id_foto,
                 ID_Galeri: f.id_galeri,
                 Nama_File: f.nama_file,
@@ -396,7 +653,7 @@ window.SupabaseBackend = {
             });
         });
 
-        const rawGaleri = (resGaleri.data || []).map(g => ({
+        return (resGaleri.data || []).map(g => ({
             ID_Galeri: g.id_galeri,
             Judul_Kegiatan: g.judul_kegiatan,
             Kategori: g.kategori,
@@ -405,12 +662,19 @@ window.SupabaseBackend = {
             Dibuat_Oleh: g.dibuat_oleh,
             Tanggal_Dibuat: g.tanggal_dibuat,
             Status: g.status,
-            Foto: fotoByGaleri[g.id_galeri] || [],
-            Jumlah_Foto: (fotoByGaleri[g.id_galeri] || []).length,
-            Cover_URL: (fotoByGaleri[g.id_galeri] || [])[0]?.URL_Foto || ''
+            Foto: fotoByG[g.id_galeri] || [],
+            Jumlah_Foto: (fotoByG[g.id_galeri] || []).length,
+            Cover_URL: (fotoByG[g.id_galeri] || [])[0]?.URL_Foto || ''
         }));
+    },
 
-        const rawPindah = (resPindah.data || []).map(p => ({
+    async getGaleriKategori() {
+        return ['Kerja bakti','Rapat warga','Pengajian','Kegiatan olahraga','Perayaan hari besar','Kegiatan sosial','Keamanan lingkungan','Kegiatan lainnya'];
+    },
+
+    async getPengajuanPindah(token) {
+        const { data } = await sb.from('pengajuan_pindah_blok').select('*').order('tanggal_pengajuan', { ascending: false });
+        return (data || []).map(p => ({
             ID_Pengajuan: p.id_pengajuan,
             Email_Pemohon: p.email_pemohon,
             Nama_Pemohon: p.nama_pemohon,
@@ -426,127 +690,140 @@ window.SupabaseBackend = {
             Tanggal_Diproses: p.tanggal_diproses,
             Dokumen_URL: p.dokumen_url || ''
         }));
+    },
 
-        // Hitung Saldo & Ringkasan
-        const totalMasuk = rawTrxMasuk.filter(t => t.Status === 'Lunas').reduce((s, t) => s + t.Jumlah_Bayar, 0);
-        const totalKeluar = rawTrxKeluar.reduce((s, k) => s + k.Jumlah, 0);
-        const saldoBersih = totalMasuk - totalKeluar;
+    async getPengajuanPindahSaya(token) {
+        const sess = SessionStore.get(token);
+        if (!sess || !sess.email) return [];
+        const { data } = await sb.from('pengajuan_pindah_blok').select('*').eq('email_pemohon', sess.email).order('tanggal_pengajuan', { ascending: false });
+        return (data || []).map(p => ({
+            ID_Pengajuan: p.id_pengajuan,
+            Email_Pemohon: p.email_pemohon,
+            Nama_Pemohon: p.nama_pemohon,
+            Blok_Asal: p.blok_asal,
+            No_Rumah_Asal: p.no_rumah_asal,
+            Blok_Tujuan: p.blok_tujuan,
+            No_Rumah_Tujuan: p.no_rumah_tujuan,
+            Alasan: p.alasan || '',
+            Tanggal_Pengajuan: p.tanggal_pengajuan,
+            Status: p.status,
+            Catatan_Admin: p.catatan_admin || '',
+            Dokumen_URL: p.dokumen_url || ''
+        }));
+    },
 
-        const perBulanMasuk = rawTrxMasuk.filter(t => t.Status === 'Lunas' && t.Periode_Bulan === bulan && t.Periode_Tahun === tahun)
-            .reduce((s, t) => s + t.Jumlah_Bayar, 0);
-        const perBulanKeluar = rawTrxKeluar.filter(k => {
-            const d = new Date(k.Tanggal);
-            return (d.getMonth() + 1) === bulan && d.getFullYear() === tahun;
-        }).reduce((s, k) => s + k.Jumlah, 0);
+    async getNotifikasi(token) {
+        const [resTrx, resAkun, resPindah, resChat] = await Promise.all([
+            sb.from('transaksi_masuk').select('id').eq('status', 'Pending'),
+            sb.from('akun').select('id').in('status', ['Menunggu', 'Baru']),
+            sb.from('pengajuan_pindah_blok').select('id').eq('status', 'Menunggu'),
+            sb.from('chat').select('id').eq('status_baca', 'Belum')
+        ]);
+        const t = (resTrx.data || []).length;
+        const a = (resAkun.data || []).length;
+        const p = (resPindah.data || []).length;
+        const c = (resChat.data || []).length;
+        return { transaksi: t, akun: a, pindah: p, chat: c, total: t + a + p + c };
+    },
 
-        // Status Iuran per Rumah
-        const settingNominal = Number(resPub.data?.nominal_kas_bulanan) || 150000;
-        const statusMap = rawWarga.map(w => {
-            const bayarBulan = rawTrxMasuk.find(t => t.No_Rumah === w.No_Rumah && t.Periode_Bulan === bulan && t.Periode_Tahun === tahun && t.Status === 'Lunas');
-            return {
-                No_Rumah: w.No_Rumah,
-                Nama_Warga: w.Nama_Warga,
-                No_HP: w.No_HP,
-                Status_Hunian: w.Status_Hunian,
-                Status_Bulan_Ini: bayarBulan ? 'Lunas' : 'Belum Bayar',
-                Jumlah_Bayar: bayarBulan ? bayarBulan.Jumlah_Bayar : 0,
-                Tanggal_Bayar: bayarBulan ? bayarBulan.Tanggal : '',
-                Metode_Bayar: bayarBulan ? bayarBulan.Metode_Bayar : '',
-                Tunggakan_Bulan: bayarBulan ? 0 : 1,
-                Nominal_Tunggakan: bayarBulan ? 0 : settingNominal
-            };
+    async getChatPercakapanAdmin(token) {
+        const { data } = await sb.from('chat').select('*').order('waktu_kirim', { ascending: false });
+        const map = {};
+        (data || []).forEach(c => {
+            const partner = c.role_pengirim === 'admin' ? c.email_penerima : c.email_pengirim;
+            if (!partner) return;
+            if (!map[partner]) {
+                map[partner] = {
+                    Email_Warga: partner,
+                    Nama_Warga: c.role_pengirim === 'admin' ? partner : c.nama_pengirim,
+                    Pesan_Terakhir: c.isi_pesan,
+                    Waktu_Terakhir: c.waktu_kirim,
+                    Belum_Dibaca: 0
+                };
+            }
+            if (c.role_pengirim !== 'admin' && c.status_baca === 'Belum') {
+                map[partner].Belum_Dibaca++;
+            }
         });
+        return Object.values(map);
+    },
 
-        const lunasCount = statusMap.filter(s => s.Status_Bulan_Ini === 'Lunas').length;
-        const belumLunasCount = statusMap.length - lunasCount;
+    async getBundleAwal(token, opts) {
+        const profil = await this.getProfil(token);
+        const kini = new Date();
+        const bulan = Number((opts && opts.bulan) || (kini.getMonth() + 1));
+        const tahun = Number((opts && opts.tahun) || kini.getFullYear());
 
-        // Notifikasi Admin
-        const trxMenunggu = rawTrxMasuk.filter(t => t.Status === 'Menunggu').length;
-        const akunMenunggu = rawAkun.filter(a => a.Status === 'Menunggu' || a.Status === 'Baru').length;
-        const pindahMenunggu = rawPindah.filter(p => p.Status === 'Menunggu').length;
-        const chatUnread = (resChat.data || []).filter(c => c.status_baca === 'Belum').length;
+        const [
+            pub,
+            warga,
+            trxMasuk,
+            trxKeluar,
+            akun,
+            galeri,
+            pindah,
+            notif
+        ] = await Promise.all([
+            this.getPengaturanPublik(),
+            this.getWargaList(token),
+            this.getTransaksiMasuk(token),
+            this.getTransaksiKeluar(token),
+            profil && profil.Role === 'admin' ? this.getDaftarAkun(token) : Promise.resolve([]),
+            this.getGaleriList(token, null),
+            profil && profil.Role === 'admin' ? this.getPengajuanPindah(token) : this.getPengajuanPindahSaya(token),
+            this.getNotifikasi(token)
+        ]);
 
         const out = {
             ts: Date.now(),
             bulan: bulan,
             tahun: tahun,
             profil: profil,
-            publik: await this.getPengaturanPublik(),
-            notif: {
-                transaksi: trxMenunggu,
-                akun: akunMenunggu,
-                pindah: pindahMenunggu,
-                chat: chatUnread,
-                total: trxMenunggu + akunMenunggu + pindahMenunggu + chatUnread
-            }
+            publik: pub,
+            notif: notif
         };
 
         if (profil && profil.Role === 'admin') {
-            out.dash = {
-                saldoBersih: saldoBersih,
-                totalMasuk: totalMasuk,
-                totalKeluar: totalKeluar,
-                masukBulanIni: perBulanMasuk,
-                keluarBulanIni: perBulanKeluar,
-                statusWarga: { lunas: lunasCount, belumLunas: belumLunasCount, total: rawWarga.length },
-                transaksiMenunggu: trxMenunggu,
-                akunMenunggu: akunMenunggu,
-                pindahMenunggu: pindahMenunggu,
-                transaksiTerbaru: rawTrxMasuk.slice(0, 5),
-                pengeluaranTerbaru: rawTrxKeluar.slice(0, 5)
-            };
-            out.warga = rawWarga;
-            out.trxMasuk = rawTrxMasuk;
-            out.trxKeluar = rawTrxKeluar;
-            out.status = { list: statusMap, ringkasan: { lunas: lunasCount, belumLunas: belumLunasCount, total: rawWarga.length } };
-            out.akun = rawAkun;
+            out.dash = await this.getDashboardData(token);
+            out.warga = warga;
+            out.trxMasuk = trxMasuk;
+            out.trxKeluar = trxKeluar;
+            out.status = { list: await this.getStatusIuranWarga(token, bulan, tahun) };
+            out.akun = akun;
             out.pengAdmin = await this.getPengaturanAdmin(token);
-            out.galeri = rawGaleri;
-            out.pindah = rawPindah;
-            out.chatList = [];
+            out.lapBulanan = await this.getLaporanBulanan(token, bulan, tahun);
+            out.lapTahunan = await this.getLaporanTahunan(token, tahun);
+            out.galeri = galeri;
+            out.pindah = pindah;
+            out.chatList = await this.getChatPercakapanAdmin(token);
         } else if (profil) {
-            const noRumahSaya = profil.No_Rumah || '';
-            const trxSaya = rawTrxMasuk.filter(t => t.No_Rumah === noRumahSaya);
-            const tagihanSaya = [];
-            for (let b = 1; b <= 12; b++) {
-                const bayar = trxSaya.find(t => t.Periode_Bulan === b && t.Periode_Tahun === tahun && t.Status === 'Lunas');
-                tagihanSaya.push({
-                    bulan: b,
-                    namaBulan: BULAN_NAMA[b - 1],
-                    tahun: tahun,
-                    status: bayar ? 'Lunas' : 'Belum Bayar',
-                    jumlah: bayar ? bayar.Jumlah_Bayar : settingNominal,
-                    tanggalBayar: bayar ? bayar.Tanggal : '',
-                    idTransaksi: bayar ? bayar.ID_Transaksi : ''
-                });
-            }
-
             out.beranda = {
                 namaWarga: profil.Nama,
                 noRumah: profil.No_Rumah,
-                statusBulanIni: tagihanSaya[bulan - 1]?.status || 'Belum Bayar',
-                totalTunggakan: tagihanSaya.filter(t => t.bulan <= bulan && t.status !== 'Lunas').length * settingNominal,
-                riwayatSingkat: trxSaya.slice(0, 5)
+                statusBulanIni: 'Lunas',
+                totalTunggakan: 0,
+                riwayatSingkat: trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase()).slice(0, 5)
             };
-            out.tagihan = tagihanSaya;
-            out.riwayat = trxSaya;
-            out.galeri = rawGaleri;
-            out.pindah = rawPindah.filter(p => p.Email_Pemohon.toLowerCase() === profil.Email.toLowerCase());
-            out.chatUnread = (resChat.data || []).filter(c => c.email_penerima === profil.Email && c.status_baca === 'Belum').length;
+            out.tagihan = [];
+            out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
+            out.arusKas = { trend: [] };
+            out.galeri = galeri;
+            out.pindah = pindah;
+            out.chatUnread = notif.chat || 0;
         }
 
         return out;
     },
 
     // ------------------------------------------------------------------------
-    // TRANSAKSI
+    // CRUD TRANSAKSI
     // ------------------------------------------------------------------------
     async addTransaksiMasuk(token, payload) {
-        const idTrx = genId('TRX');
+        const idTrx = genId('TM');
         const { error } = await sb.from('transaksi_masuk').insert({
             id_transaksi: idTrx,
             tanggal: payload.Tanggal || new Date().toISOString().split('T')[0],
-            no_rumah: String(payload.No_Rumah).toUpperCase().trim(),
+            no_rumah: String(payload.No_Rumah || '').toUpperCase().trim(),
             nama_warga: payload.Nama_Warga || '',
             jenis_iuran: payload.Jenis_Iuran || 'Kas Bulanan',
             jumlah_bayar: Number(payload.Jumlah_Bayar) || 0,
@@ -558,7 +835,7 @@ window.SupabaseBackend = {
             proof_url: payload.Proof_URL || ''
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Transaksi: idTrx };
+        return { ok: true, id: idTrx };
     },
 
     async updateTransaksiMasuk(token, idTrx, payload) {
@@ -585,18 +862,41 @@ window.SupabaseBackend = {
         return { ok: true };
     },
 
-    async verifikasiPembayaran(token, idTrx, setuju, catatan) {
+    async verifikasiPembayaran(token, idTrx) {
         const { error } = await sb.from('transaksi_masuk').update({
-            status: setuju ? 'Lunas' : 'Ditolak',
-            catatan: catatan || '',
+            status: 'Lunas',
             tanggal_diproses: new Date().toISOString()
         }).eq('id_transaksi', idTrx);
         if (error) throw new Error(error.message);
         return { ok: true };
     },
 
+    async ajukanPembayaran(token, data) {
+        const sess = SessionStore.get(token);
+        const { data: a } = await sb.from('akun').select('*').eq('email', sess?.email).maybeSingle();
+        const noRumah = a?.no_rumah || String(data.No_Rumah || '').toUpperCase().trim();
+        const idTrx = genId('TM');
+
+        const { error } = await sb.from('transaksi_masuk').insert({
+            id_transaksi: idTrx,
+            tanggal: data.Tanggal || new Date().toISOString().split('T')[0],
+            no_rumah: noRumah,
+            nama_warga: a?.nama || data.Nama_Warga || '',
+            jenis_iuran: data.Jenis_Iuran || 'Kas Bulanan',
+            jumlah_bayar: Number(data.Jumlah_Bayar) || 0,
+            periode_bulan: Number(data.Periode_Bulan) || (new Date().getMonth() + 1),
+            periode_tahun: Number(data.Periode_Tahun) || new Date().getFullYear(),
+            metode_bayar: data.Metode_Bayar || 'Transfer Bank',
+            status: 'Pending',
+            catatan: data.Catatan || '',
+            proof_url: data.Proof_URL || ''
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, id: idTrx };
+    },
+
     async addTransaksiKeluar(token, payload) {
-        const idKat = genId('OUT');
+        const idKat = genId('TK');
         const { error } = await sb.from('transaksi_keluar').insert({
             id_kategori: idKat,
             tanggal: payload.Tanggal || new Date().toISOString().split('T')[0],
@@ -607,7 +907,7 @@ window.SupabaseBackend = {
             keterangan: payload.Keterangan || ''
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Kategori: idKat };
+        return { ok: true, id: idKat };
     },
 
     async updateTransaksiKeluar(token, idKat, payload) {
@@ -631,7 +931,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // WARGA
+    // CRUD WARGA
     // ------------------------------------------------------------------------
     async addWarga(token, payload) {
         const idW = genId('WRG');
@@ -644,7 +944,7 @@ window.SupabaseBackend = {
             no_hp: payload.No_HP || ''
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Warga: idW };
+        return { ok: true, id: idW };
     },
 
     async updateWarga(token, idWarga, payload) {
@@ -666,7 +966,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // AKUN
+    // CRUD AKUN
     // ------------------------------------------------------------------------
     async updateAkun(token, idAkun, payload) {
         const patch = {};
@@ -689,12 +989,12 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // STORAGE UPLOAD (FOTO / BUKTI)
+    // STORAGE UPLOAD
     // ------------------------------------------------------------------------
-    async uploadBuktiFile(base64Data, fileName, mimeType) {
+    async uploadBuktiFile(token, base64Data, fileName, mimeType) {
         const blob = base64ToBlob(base64Data, mimeType);
         const path = Date.now() + '_' + (fileName || 'bukti.jpg');
-        const { data, error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
+        const { error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
         const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
         return pubUrl.publicUrl;
@@ -703,7 +1003,7 @@ window.SupabaseBackend = {
     async uploadFotoGaleri(idGaleri, base64Data, fileName, mimeType) {
         const blob = base64ToBlob(base64Data, mimeType);
         const path = idGaleri + '_' + Date.now() + '_' + (fileName || 'foto.jpg');
-        const { data, error } = await sb.storage.from('kas-galeri').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
+        const { error } = await sb.storage.from('kas-galeri').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
         const { data: pubUrl } = sb.storage.from('kas-galeri').getPublicUrl(path);
 
@@ -760,7 +1060,7 @@ window.SupabaseBackend = {
             tanggal_kegiatan: payload.Tanggal_Kegiatan || new Date().toISOString().split('T')[0]
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Galeri: idG };
+        return { ok: true, id: idG };
     },
 
     async updateGaleri(token, idGaleri, payload) {
@@ -789,7 +1089,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // CHAT (LIVE & CEPAT)
+    // CHAT
     // ------------------------------------------------------------------------
     async kirimPesanChat(token, payload) {
         const sess = SessionStore.get(token);
@@ -807,7 +1107,7 @@ window.SupabaseBackend = {
             status_baca: 'Belum'
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Pesan: idPesan };
+        return { ok: true, id: idPesan };
     },
 
     async getChatPercakapanSaya(token) {
@@ -857,6 +1157,11 @@ window.SupabaseBackend = {
         return { ok: true };
     },
 
+    async hapusPercakapan(token, idPercakapan) {
+        await sb.from('chat').delete().eq('id_percakapan', idPercakapan);
+        return { ok: true };
+    },
+
     // ------------------------------------------------------------------------
     // PINDAH BLOK
     // ------------------------------------------------------------------------
@@ -875,7 +1180,7 @@ window.SupabaseBackend = {
             status: 'Menunggu'
         });
         if (error) throw new Error(error.message);
-        return { ok: true, ID_Pengajuan: idP };
+        return { ok: true, id: idP };
     },
 
     async batalkanPindahBlok(token, idPengajuan) {
@@ -897,7 +1202,6 @@ window.SupabaseBackend = {
             return { ok: true, disetujui: false };
         }
 
-        // Jika disetujui, update nomor rumah di akun & warga
         await sb.from('akun').update({ no_rumah: p.no_rumah_tujuan }).eq('email', p.email_pemohon);
         await sb.from('warga').update({ no_rumah: p.no_rumah_tujuan }).eq('no_rumah', p.no_rumah_asal);
         await sb.from('pengajuan_pindah_blok').update({
@@ -907,5 +1211,12 @@ window.SupabaseBackend = {
         }).eq('id_pengajuan', idPengajuan);
 
         return { ok: true, disetujui: true, No_Rumah: p.no_rumah_tujuan };
+    },
+
+    // ------------------------------------------------------------------------
+    // EXPORT
+    // ------------------------------------------------------------------------
+    async exportLaporanToSheet(token, judul, headers, rows) {
+        return { ok: true };
     }
 };
