@@ -608,7 +608,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                                 { Nama: this.formDaftar.Nama, No_Rumah: this.formDaftar.No_Rumah, No_HP: this.formDaftar.No_HP });
                         } catch (e) { return; }
                         await this.muatProfil();
-                        this.toast('Pendaftaran terkirim ke bendahara.', 'success');
+                        this.toast('Pendaftaran berhasil. Selamat datang!', 'success');
                     },
 
                     /* ---------- navigasi ---------- */
