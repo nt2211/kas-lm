@@ -185,6 +185,19 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                 },
 
                 watch: {
+                    loading(v) {
+                        if (v) {
+                            clearTimeout(this._loadingWatchdog);
+                            this._loadingWatchdog = setTimeout(() => {
+                                if (this.loading) {
+                                    this.loading = false;
+                                    this.pendingCalls = 0;
+                                }
+                            }, 4000); // Otomatis tutup spinner maksimal 4 detik agar tidak pernah macet
+                        } else {
+                            clearTimeout(this._loadingWatchdog);
+                        }
+                    },
                     trxSearch(v) { this.tunda('qTrx', () => { this.qTrx = (v || '').toLowerCase().trim(); this.limitMasuk = 100; this.limitKeluar = 100; }); },
                     statusSearch(v) { this.tunda('qStatus', () => { this.qStatus = (v || '').toLowerCase().trim(); }); },
                     akunSearch(v) { this.tunda('qAkun', () => { this.qAkun = (v || '').toLowerCase().trim(); }); },
@@ -438,12 +451,20 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         const pubLama = this.bacaCache('pub');
                         if (pubLama) this.publik = pubLama;
                         const t = this.ambilToken();
-                        const pPublik = this.call('getPengaturanPublik');
-                        const pProfil = t ? this.call('getProfil', t) : null;
-                        try { this.publik = await pPublik; this.tulisCache('pub', this.publik); } catch (e) { }
-                        if (!t) return;
+                        
+                        // Muat data publik di latar belakang tanpa memblokir layar dengan spinner
+                        this.jalankan('getPengaturanPublik', []).then(pub => {
+                            if (pub) { this.publik = pub; this.tulisCache('pub', pub); }
+                        }).catch(() => {});
+
+                        if (!t) {
+                            this.loading = false;
+                            this.pendingCalls = 0;
+                            return;
+                        }
+
                         let p;
-                        try { p = await pProfil; } catch (e) { return; }
+                        try { p = await this.jalankan('getProfil', [t]); } catch (e) { this.keluarPaksa(); return; }
                         if (!p) { this.keluarPaksa(); return; }
                         this.token = t;
                         this.terapkanProfil(p);
@@ -453,6 +474,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             await this.muatHalaman(this.page);
                             this.startHeartbeat();
                         }
+                        this.loading = false;
+                        this.pendingCalls = 0;
                     },
                     terapkanProfil(p) {
                         this.profil = p;
@@ -472,7 +495,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     },
                     async muatProfil() {
                         if (!this.token) return;
-                        let p; try { p = await this.call('getProfil', this.token); } catch (e) { return; }
+                        let p; 
+                        try { p = await this.jalankan('getProfil', [this.token]); } catch (e) { this.keluarPaksa(); return; }
                         if (!p) { this.keluarPaksa(); return; }
                         this.terapkanProfil(p);
                         if (p.Status === 'Aktif') {
@@ -482,13 +506,15 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             this.startHeartbeat();
                             if (this.formDaftar.Foto_base64 && this.formDaftar.Foto_mime) {
                                 try {
-                                    await this.call('uploadFotoProfil', this.token, this.formDaftar.Foto_base64,
-                                        'foto-daftar.' + (this.formDaftar.Foto_mime.split('/')[1] || 'jpg'), this.formDaftar.Foto_mime);
+                                    await this.jalankan('uploadFotoProfil', [this.token, this.formDaftar.Foto_base64,
+                                        'foto-daftar.' + (this.formDaftar.Foto_mime.split('/')[1] || 'jpg'), this.formDaftar.Foto_mime]);
                                 } catch (e) { }
                                 this.formDaftar.Foto_base64 = ''; this.formDaftar.Foto_mime = '';
-                                try { this.profil = await this.call('getProfil', this.token); } catch (e) { }
+                                try { this.profil = await this.jalankan('getProfil', [this.token]); } catch (e) { }
                             }
                         }
+                        this.loading = false;
+                        this.pendingCalls = 0;
                     },
                     async mulaiGoogle() {
                         if (this.modeAuth === 'daftar') {
