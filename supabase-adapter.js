@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * KAS PERUMAHAN BLOK L/M — SUPABASE ADAPTER (LENGKAP SEMUA FITUR)
- * Super cepat (< 50ms), Realtime, 100% Free PostgreSQL & Storage
+ * + Chat Warga ↔ Warga
  * ============================================================================
  */
 
@@ -31,6 +31,7 @@ function normalisasiNoHp(hp) {
     else if (!n.startsWith('62')) n = '62' + n;
     return n;
 }
+
 function base64ToBlob(base64, mime) {
     if (typeof base64 === 'string' && base64.includes(',')) {
         base64 = base64.split(',')[1];
@@ -46,6 +47,18 @@ function base64ToBlob(base64, mime) {
         byteArrays.push(new Uint8Array(byteNumbers));
     }
     return new Blob(byteArrays, { type: mime || 'image/jpeg' });
+}
+
+/**
+ * Chat pair id deterministik untuk percakapan warga ↔ warga.
+ * Urutan email di-sort agar A__B dan B__A menghasilkan id sama.
+ */
+function chatPairId(emailA, emailB) {
+    const a = String(emailA || '').toLowerCase().trim();
+    const b = String(emailB || '').toLowerCase().trim();
+    if (!a || !b) return '';
+    const [x, y] = a < b ? [a, b] : [b, a];
+    return 'WW-' + x + '__' + y;
 }
 
 // Session store lokal (365 hari / 1 tahun)
@@ -314,7 +327,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // LAPORAN & STATISTIK (DIPERLUKAN MENU LAPORAN)
+    // LAPORAN & STATISTIK
     // ------------------------------------------------------------------------
     async getLaporanBulanan(token, bulan, tahun) {
         const b = Number(bulan) || (new Date().getMonth() + 1);
@@ -379,7 +392,6 @@ window.SupabaseBackend = {
         const rawMasuk = resMasuk.data || [];
         const rawKeluar = resKeluar.data || [];
 
-        // Saldo sebelum tahun ini
         const masukLalu = rawMasuk.filter(t => Number(t.periode_tahun) < th).reduce((s, t) => s + Number(t.jumlah_bayar), 0);
         const keluarLalu = rawKeluar.filter(k => new Date(k.tanggal).getFullYear() < th).reduce((s, k) => s + Number(k.jumlah), 0);
         let saldo = masukLalu - keluarLalu;
@@ -521,7 +533,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // BUNDLE & DASHBOARD DATA
+    // DASHBOARD
     // ------------------------------------------------------------------------
     async getDashboardData(token) {
         const kini = new Date();
@@ -595,7 +607,7 @@ window.SupabaseBackend = {
             akunMenunggu: (resAkun.data || []).filter(a => a.status === 'Menunggu').length,
             permintaanRumah: (resAkun.data || []).filter(a => a.rumah_diminta).length,
             pindahMenunggu: (resPindah.data || []).filter(p => p.status === 'Menunggu').length,
-            chatBelumDibaca: (resChat.data || []).filter(c => c.status_baca === 'Belum').length,
+            chatBelumDibaca: (resChat.data || []).filter(c => c.status_baca === 'Belum' && c.email_penerima === 'admin').length,
             trend: trend,
             pengeluaranKategori: Object.keys(katMap).map(k => ({ kategori: k, jumlah: katMap[k] })),
             pemasukanJenis: Object.keys(jnsMap).map(k => ({ jenis: k, jumlah: jnsMap[k] })),
@@ -779,12 +791,28 @@ window.SupabaseBackend = {
     },
 
     async getNotifikasi(token) {
-        const [resTrx, resAkun, resPindah, resChat] = await Promise.all([
+        const sess = SessionStore.get(token);
+        const profil = sess ? await this.getProfil(token) : null;
+        const isAdmin = !!(profil && profil.Role === 'admin');
+
+        let chatQuery = sb.from('chat').select('id').eq('status_baca', 'Belum');
+        if (isAdmin) {
+            chatQuery = chatQuery.eq('email_penerima', 'admin');
+        } else if (sess && sess.email) {
+            chatQuery = chatQuery.eq('email_penerima', sess.email.toLowerCase());
+        } else {
+            chatQuery = null;
+        }
+
+        const promises = [
             sb.from('transaksi_masuk').select('id').eq('status', 'Pending'),
             sb.from('akun').select('id').in('status', ['Menunggu', 'Baru']),
-            sb.from('pengajuan_pindah_blok').select('id').eq('status', 'Menunggu'),
-            sb.from('chat').select('id').eq('status_baca', 'Belum')
-        ]);
+            sb.from('pengajuan_pindah_blok').select('id').eq('status', 'Menunggu')
+        ];
+        if (chatQuery) promises.push(chatQuery);
+        else promises.push(Promise.resolve({ data: [] }));
+
+        const [resTrx, resAkun, resPindah, resChat] = await Promise.all(promises);
         const t = (resTrx.data || []).length;
         const a = (resAkun.data || []).length;
         const p = (resPindah.data || []).length;
@@ -792,16 +820,34 @@ window.SupabaseBackend = {
         return { transaksi: t, akun: a, pindah: p, chat: c, total: t + a + p + c };
     },
 
+    async getUserAktifList(token) {
+        const { data } = await sb.from('akun')
+            .select('id_akun,nama,email,no_rumah,foto_url,foto,role,status,last_aktif,last_login')
+            .eq('status', 'Aktif');
+        return (data || []).map(a => ({
+            ID_Akun: a.id_akun,
+            Email: a.email,
+            Nama: a.nama || a.email,
+            No_Rumah: a.no_rumah || '—',
+            Avatar: a.foto_url || a.foto || '',
+            Role: a.role || 'warga',
+            Online: a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false,
+            Last_Aktif: a.last_aktif || a.last_login || ''
+        })).sort((a, b) => (b.Online ? 1 : 0) - (a.Online ? 1 : 0) || String(b.Last_Aktif || '').localeCompare(String(a.Last_Aktif || '')));
+    },
+
+    // ------------------------------------------------------------------------
+    // CHAT — ADMIN ↔ WARGA (dipakai panel bendahara)
+    // ------------------------------------------------------------------------
     async getChatPercakapanAdmin(token) {
         const [resChat, resAkun] = await Promise.all([
-            sb.from('chat').select('*').order('waktu_kirim', { ascending: false }),
+            sb.from('chat').select('*').like('id_percakapan', 'CW-%').order('waktu_kirim', { ascending: false }),
             sb.from('akun').select('*').neq('role', 'admin').order('no_rumah')
         ]);
         const chatData = resChat.data || [];
         const akunData = resAkun.data || [];
 
         const map = {};
-        // Semua warga langsung masuk daftar, jadi bisa dibuka walau belum ada chat
         akunData.forEach(a => {
             const email = (a.email || '').toLowerCase().trim();
             if (!email) return;
@@ -824,8 +870,9 @@ window.SupabaseBackend = {
         });
 
         chatData.forEach(c => {
-            const partner = (c.role_pengirim === 'admin' ? c.email_penerima : c.email_pengirim || '')
-                .toLowerCase().trim();
+            const from = (c.email_pengirim || '').toLowerCase().trim();
+            const to = (c.email_penerima || '').toLowerCase().trim();
+            const partner = (c.role_pengirim === 'admin') ? to : from;
             if (!partner) return;
             if (!map[partner]) {
                 map[partner] = {
@@ -846,96 +893,289 @@ window.SupabaseBackend = {
                 map[partner].Pesan_Terakhir = c.isi_pesan || (c.url_lampiran ? '[Lampiran]' : '');
                 map[partner].Waktu_Terakhir = c.waktu_kirim || '';
             }
-            if (c.role_pengirim !== 'admin' && c.status_baca === 'Belum') {
+            if (c.role_pengirim === 'warga' && c.status_baca === 'Belum') {
                 map[partner].Belum_Dibaca++;
             }
             map[partner].Total_Pesan++;
         });
 
         return Object.values(map).sort((a, b) => {
-            // 1) Belum dibaca paling atas
             if (a.Belum_Dibaca !== b.Belum_Dibaca) return b.Belum_Dibaca - a.Belum_Dibaca;
-            // 2) Chat terbaru berikutnya
             if (a.Waktu_Terakhir && b.Waktu_Terakhir) {
                 return new Date(b.Waktu_Terakhir).getTime() - new Date(a.Waktu_Terakhir).getTime();
             }
             if (a.Waktu_Terakhir) return -1;
             if (b.Waktu_Terakhir) return 1;
-            // 3) Online dulu
             if (a.Online !== b.Online) return (b.Online ? 1 : 0) - (a.Online ? 1 : 0);
-            // 4) Terakhir, urut no rumah
             return String(a.No_Rumah || '').localeCompare(String(b.No_Rumah || ''));
         });
     },
 
-    async getBundleAwal(token, opts) {
-        const profil = await this.getProfil(token);
-        const kini = new Date();
-        const bulan = Number((opts && opts.bulan) || (kini.getMonth() + 1));
-        const tahun = Number((opts && opts.tahun) || kini.getFullYear());
+    async getChatAdminDenganWarga(token, emailWarga) {
+        if (String(emailWarga).toLowerCase() === 'admin') {
+            const { data: admins } = await sb.from('akun').select('last_aktif').eq('role', 'admin');
+            const online = (admins || []).some(a => a.last_aktif && (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000));
+            return { Online: online, Last_Aktif: '' };
+        }
+        const cleanEmail = String(emailWarga).toLowerCase().trim();
+        const idPercakapan = 'CW-' + cleanEmail;
+        const [{ data: pesanData }, { data: akunWarga }] = await Promise.all([
+            sb.from('chat').select('*').eq('id_percakapan', idPercakapan).order('waktu_kirim', { ascending: true }),
+            sb.from('akun').select('*').eq('email', cleanEmail).maybeSingle()
+        ]);
+        const isOnline = akunWarga && akunWarga.last_aktif ? (Date.now() - new Date(akunWarga.last_aktif).getTime() < 5 * 60 * 1000) : false;
+        return {
+            ID_Percakapan: idPercakapan,
+            Pesan: (pesanData || []).map(c => ({
+                ID_Pesan: c.id_pesan,
+                ID_Percakapan: c.id_percakapan,
+                Email_Pengirim: c.email_pengirim,
+                Nama_Pengirim: c.nama_pengirim,
+                Role_Pengirim: c.role_pengirim,
+                Email_Penerima: c.email_penerima,
+                Isi_Pesan: c.isi_pesan,
+                URL_Lampiran: c.url_lampiran,
+                Waktu_Kirim: c.waktu_kirim,
+                Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
+            })),
+            Online: isOnline,
+            Last_Aktif: akunWarga?.last_aktif || akunWarga?.last_login || '',
+            Nama_Warga: akunWarga?.nama || akunWarga?.email || cleanEmail,
+            No_Rumah: akunWarga?.no_rumah || '—',
+            Avatar: akunWarga?.foto_url || akunWarga?.foto || ''
+        };
+    },
 
-        const [
-            pub,
-            warga,
-            trxMasuk,
-            trxKeluar,
-            akun,
-            permintaanRumah,
-            galeri,
-            pindah,
-            notif
-        ] = await Promise.all([
-            this.getPengaturanPublik(),
-            this.getWargaList(token),
-            this.getTransaksiMasuk(token),
-            this.getTransaksiKeluar(token),
-            profil && profil.Role === 'admin' ? this.getDaftarAkun(token) : Promise.resolve([]),
-            profil && profil.Role === 'admin' ? this.getPermintaanRumah(token) : Promise.resolve([]),
-            this.getGaleriList(token, null),
-            profil && profil.Role === 'admin' ? this.getPengajuanPindah(token) : this.getPengajuanPindahSaya(token),
-            this.getNotifikasi(token)
+    // ------------------------------------------------------------------------
+    // CHAT — WARGA (bendahara + sesama warga)
+    // ------------------------------------------------------------------------
+    async getChatPercakapanSaya(token) {
+        const sess = SessionStore.get(token);
+        if (!sess || !sess.email) return [];
+        const myEmail = sess.email.toLowerCase().trim();
+        const idPercakapan = 'CW-' + myEmail;
+        const { data } = await sb.from('chat')
+            .select('*')
+            .eq('id_percakapan', idPercakapan)
+            .order('waktu_kirim', { ascending: true });
+        return (data || []).map(c => ({
+            ID_Pesan: c.id_pesan,
+            ID_Percakapan: c.id_percakapan,
+            Email_Pengirim: c.email_pengirim,
+            Nama_Pengirim: c.nama_pengirim,
+            Role_Pengirim: c.role_pengirim,
+            Email_Penerima: c.email_penerima,
+            Isi_Pesan: c.isi_pesan,
+            URL_Lampiran: c.url_lampiran,
+            Waktu_Kirim: c.waktu_kirim,
+            Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
+        }));
+    },
+
+    /**
+     * Daftar kontak warga: bendahara + semua warga Aktif lain.
+     * Sudah termasuk info pesan terakhir, unread, online.
+     */
+    async getKontakWarga(token) {
+        const sess = SessionStore.get(token);
+        if (!sess || !sess.email) return [];
+        const myEmail = sess.email.toLowerCase().trim();
+
+        const [{ data: akunData }, { data: chatData }] = await Promise.all([
+            sb.from('akun').select('id_akun,email,nama,no_rumah,foto_url,foto,role,last_aktif,last_login,status')
+                .eq('status', 'Aktif'),
+            sb.from('chat').select('*').or(`email_pengirim.eq.${myEmail},email_penerima.eq.${myEmail}`)
+                .order('waktu_kirim', { ascending: true })
         ]);
 
-        const out = {
-            ts: Date.now(),
-            bulan: bulan,
-            tahun: tahun,
-            profil: profil,
-            publik: pub,
-            notif: notif
-        };
+        // Kelompokkan chat per partner (admin / email warga)
+        const chatByPartner = {};
+        (chatData || []).forEach(c => {
+            const from = (c.email_pengirim || '').toLowerCase().trim();
+            const to = (c.email_penerima || '').toLowerCase().trim();
+            let partner = '';
+            if (from === myEmail && to === 'admin') partner = 'admin';
+            else if (to === myEmail && from === 'admin') partner = 'admin';
+            else if (from === myEmail) partner = to;
+            else if (to === myEmail) partner = from;
+            if (!partner) return;
+            if (!chatByPartner[partner]) chatByPartner[partner] = [];
+            chatByPartner[partner].push(c);
+        });
 
-        if (profil && profil.Role === 'admin') {
-            out.dash = await this.getDashboardData(token);
-            out.warga = warga;
-            out.trxMasuk = trxMasuk;
-            out.trxKeluar = trxKeluar;
-            out.status = { list: await this.getStatusIuranWarga(token, bulan, tahun) };
-            out.akun = akun;
-            out.permintaanRumah = permintaanRumah;
-            out.pengAdmin = await this.getPengaturanAdmin(token);
-            out.lapBulanan = await this.getLaporanBulanan(token, bulan, tahun);
-            out.lapTahunan = await this.getLaporanTahunan(token, tahun);
-            out.galeri = galeri;
-            out.pindah = pindah;
-            out.chatList = await this.getChatPercakapanAdmin(token);
-        } else if (profil) {
-            out.beranda = {
-                namaWarga: profil.Nama,
-                noRumah: profil.No_Rumah,
-                statusBulanIni: 'Lunas',
-                totalTunggakan: 0,
-                riwayatSingkat: trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase()).slice(0, 5)
-            };
-            out.tagihan = [];
-            out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
-            out.arusKas = { trend: [] };
-            out.galeri = galeri;
-            out.pindah = pindah;
-            out.chatUnread = notif.chat || 0;
+        const contacts = [];
+        (akunData || []).forEach(a => {
+            const e = (a.email || '').toLowerCase().trim();
+            if (!e || e === myEmail) return;
+
+            const isAdmin = a.role === 'admin';
+            const partnerKey = isAdmin ? 'admin' : e;
+            const msgs = chatByPartner[partnerKey] || [];
+            const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+            const unread = msgs.filter(c =>
+                (c.email_penerima || '').toLowerCase() === myEmail &&
+                c.status_baca === 'Belum'
+            ).length;
+
+            contacts.push({
+                ID_Percakapan: isAdmin ? ('CW-' + myEmail) : chatPairId(myEmail, e),
+                Email: a.email,
+                Nama: a.nama || a.email,
+                No_Rumah: a.no_rumah || '—',
+                Avatar: a.foto_url || a.foto || '',
+                Role: a.role || 'warga',
+                isAdmin,
+                Online: a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false,
+                Last_Aktif: a.last_aktif || a.last_login || '',
+                Pesan_Terakhir: lastMsg ? (lastMsg.isi_pesan || (lastMsg.url_lampiran ? '[Lampiran]' : '')) : '',
+                Waktu_Terakhir: lastMsg ? lastMsg.waktu_kirim : '',
+                Belum_Dibaca: unread
+            });
+        });
+
+        return contacts.sort((a, b) => {
+            if (a.Belum_Dibaca !== b.Belum_Dibaca) return b.Belum_Dibaca - a.Belum_Dibaca;
+            if (a.isAdmin && !b.isAdmin) return -1;
+            if (!a.isAdmin && b.isAdmin) return 1;
+            if (a.Waktu_Terakhir && b.Waktu_Terakhir) return new Date(b.Waktu_Terakhir) - new Date(a.Waktu_Terakhir);
+            if (a.Waktu_Terakhir) return -1;
+            if (b.Waktu_Terakhir) return 1;
+            return String(a.No_Rumah || '').localeCompare(String(b.No_Rumah || ''));
+        });
+    },
+
+    /**
+     * Ambil isi percakapan warga ↔ bendahara / warga lain.
+     * Partner ditentukan otomatis berdasarkan email lawan.
+     */
+    async getChatWargaDenganWarga(token, emailLawan) {
+        const sess = SessionStore.get(token);
+        if (!sess || !sess.email) return { Pesan: [] };
+        const myEmail = sess.email.toLowerCase().trim();
+        const other = String(emailLawan).toLowerCase().trim();
+
+        const { data: akunLawan } = await sb.from('akun').select('*').eq('email', other).maybeSingle();
+        const isAdmin = !!(akunLawan && akunLawan.role === 'admin');
+
+        let idPercakapan = isAdmin ? ('CW-' + myEmail) : chatPairId(myEmail, other);
+
+        const { data } = await sb.from('chat').select('*').eq('id_percakapan', idPercakapan)
+            .order('waktu_kirim', { ascending: true });
+
+        const isOnline = akunLawan && akunLawan.last_aktif
+            ? (Date.now() - new Date(akunLawan.last_aktif).getTime() < 5 * 60 * 1000) : false;
+
+        return {
+            ID_Percakapan: idPercakapan,
+            Email_Lawan: other,
+            Nama_Lawan: akunLawan?.nama || other,
+            No_Rumah: akunLawan?.no_rumah || '—',
+            Avatar: akunLawan?.foto_url || akunLawan?.foto || '',
+            Role_Lawan: akunLawan?.role || 'warga',
+            isAdmin,
+            Online: isOnline,
+            Last_Aktif: akunLawan?.last_aktif || '',
+            Pesan: (data || []).map(c => ({
+                ID_Pesan: c.id_pesan,
+                ID_Percakapan: c.id_percakapan,
+                Email_Pengirim: c.email_pengirim,
+                Nama_Pengirim: c.nama_pengirim,
+                Role_Pengirim: (c.email_pengirim || '').toLowerCase() === myEmail ? 'saya' : 'lawan',
+                Email_Penerima: c.email_penerima,
+                Isi_Pesan: c.isi_pesan,
+                URL_Lampiran: c.url_lampiran,
+                Waktu_Kirim: c.waktu_kirim,
+                Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
+            }))
+        };
+    },
+
+    async tandaiChatDibaca(token, idPercakapan) {
+        if (!idPercakapan) return { ok: false };
+        const sess = SessionStore.get(token);
+        const profil = sess ? await this.getProfil(token) : null;
+        const isAdmin = !!(profil && profil.Role === 'admin');
+
+        let emailPenerima = '';
+        if (isAdmin) {
+            emailPenerima = 'admin';
+        } else if (sess && sess.email) {
+            emailPenerima = sess.email.toLowerCase();
+        } else {
+            return { ok: false };
         }
 
-        return out;
+        await sb.from('chat').update({ status_baca: 'Dibaca' })
+            .eq('id_percakapan', idPercakapan)
+            .eq('email_penerima', emailPenerima)
+            .eq('status_baca', 'Belum');
+        return { ok: true };
+    },
+
+    async hapusPercakapan(token, idPercakapan) {
+        await sb.from('chat').delete().eq('id_percakapan', idPercakapan);
+        return { ok: true };
+    },
+
+    /**
+     * Kirim pesan. Otomatis deteksi tujuan:
+     * - Admin → Warga : idPercakapan = CW-<emailWarga>, email_penerima = emailWarga
+     * - Warga → Admin : idPercakapan = CW-<emailWarga>, email_penerima = 'admin'
+     * - Warga → Warga : idPercakapan = WW-<a>__<b>, email_penerima = emailLawan
+     */
+    async kirimPesanChat(token, payload) {
+        const sess = SessionStore.get(token);
+        const idPesan = genId('MSG');
+        const profil = sess ? await this.getProfil(token) : null;
+        const isAdmin = !!(profil && profil.Role === 'admin');
+        const myEmail = ((profil && profil.Email) || sess?.email || 'admin').toLowerCase().trim();
+        const target = String(payload.Email_Lawan || payload.Email_Penerima || '').toLowerCase().trim();
+        if (!target) throw new Error('Tentukan tujuan pesan terlebih dahulu.');
+
+        // Cek apakah target adalah admin
+        const { data: targetAkun } = await sb.from('akun').select('role,email').eq('email', target).maybeSingle();
+        const targetIsAdmin = !!(targetAkun && targetAkun.role === 'admin');
+
+        let idPercakapan = '';
+        let emailPenerima = '';
+
+        if (isAdmin) {
+            idPercakapan = 'CW-' + target;
+            emailPenerima = target;
+        } else if (targetIsAdmin) {
+            idPercakapan = 'CW-' + myEmail;
+            emailPenerima = 'admin';
+        } else {
+            idPercakapan = chatPairId(myEmail, target);
+            emailPenerima = target;
+        }
+
+        const { error } = await sb.from('chat').insert({
+            id_pesan: idPesan,
+            id_percakapan: idPercakapan,
+            email_pengirim: myEmail,
+            nama_pengirim: (profil && profil.Nama) || (isAdmin ? 'Bendahara' : 'Warga'),
+            role_pengirim: isAdmin ? 'admin' : 'warga',
+            email_penerima: emailPenerima,
+            isi_pesan: payload.Isi_Pesan || '',
+            url_lampiran: payload.URL_Lampiran || '',
+            waktu_kirim: new Date().toISOString(),
+            status_baca: 'Belum'
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, id: idPesan };
+    },
+
+    async uploadLampiranChat(token, base64Data, fileName, mimeType) {
+        const blob = base64ToBlob(base64Data, mimeType);
+        const safeName = (fileName || 'lampiran').replace(/[^\w.\-]/g, '_');
+        const path = 'chat_' + Date.now() + '_' + safeName;
+        const { error } = await sb.storage.from('kas-bukti').upload(path, blob, {
+            contentType: mimeType || 'application/octet-stream'
+        });
+        if (error) throw new Error(error.message);
+        const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
+        return { ok: true, url: pubUrl.publicUrl };
     },
 
     // ------------------------------------------------------------------------
@@ -1212,117 +1452,6 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // CHAT
-    // ------------------------------------------------------------------------
-    async kirimPesanChat(token, payload) {
-        const sess = SessionStore.get(token);
-        const idPesan = genId('MSG');
-        const profil = sess ? await this.getProfil(token) : null;
-        const role = (profil && profil.Role) || payload.Role_Pengirim || 'warga';
-        const myEmail = ((profil && profil.Email) || sess?.email || 'admin').toLowerCase().trim();
-
-        let idPercakapan = payload.ID_Percakapan;
-        let emailPenerima = '';
-        if (role === 'admin') {
-            emailPenerima = (payload.Email_Lawan || payload.Email_Penerima || '').toLowerCase().trim();
-            if (!idPercakapan) idPercakapan = 'CW-' + emailPenerima;
-        } else {
-            emailPenerima = 'admin';
-            if (!idPercakapan) idPercakapan = 'CW-' + myEmail;
-        }
-
-        if (!idPercakapan || idPercakapan === 'CW-') {
-            throw new Error('Tentukan warga tujuan pesan terlebih dahulu.');
-        }
-
-        const { error } = await sb.from('chat').insert({
-            id_pesan: idPesan,
-            id_percakapan: idPercakapan,
-            email_pengirim: myEmail,
-            nama_pengirim: (profil && profil.Nama) || (role === 'admin' ? 'Bendahara' : 'Warga'),
-            role_pengirim: role,
-            email_penerima: emailPenerima,
-            isi_pesan: payload.Isi_Pesan || '',
-            url_lampiran: payload.URL_Lampiran || '',
-            waktu_kirim: new Date().toISOString(),
-            status_baca: 'Belum'
-        });
-        if (error) throw new Error(error.message);
-        return { ok: true, id: idPesan };
-    },
-
-    async getChatPercakapanSaya(token) {
-        const sess = SessionStore.get(token);
-        if (!sess || !sess.email) return [];
-        const myEmail = sess.email.toLowerCase().trim();
-        const idPercakapan = 'CW-' + myEmail;
-        const { data } = await sb.from('chat')
-            .select('*')
-            .or(`id_percakapan.eq.${idPercakapan},email_pengirim.eq.${myEmail},email_penerima.eq.${myEmail}`)
-            .order('waktu_kirim', { ascending: true });
-        return (data || []).map(c => ({
-            ID_Pesan: c.id_pesan,
-            ID_Percakapan: c.id_percakapan,
-            Email_Pengirim: c.email_pengirim,
-            Nama_Pengirim: c.nama_pengirim,
-            Role_Pengirim: c.role_pengirim,
-            Email_Penerima: c.email_penerima,
-            Isi_Pesan: c.isi_pesan,
-            URL_Lampiran: c.url_lampiran,
-            Waktu_Kirim: c.waktu_kirim,
-            Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
-        }));
-    },
-
-    async getChatAdminDenganWarga(token, emailWarga) {
-        if (String(emailWarga).toLowerCase() === 'admin') {
-            const { data: admins } = await sb.from('akun').select('last_aktif').eq('role', 'admin');
-            const online = (admins || []).some(a => a.last_aktif && (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000));
-            return { Online: online, Last_Aktif: '' };
-        }
-        const cleanEmail = String(emailWarga).toLowerCase().trim();
-        const idPercakapan = 'CW-' + cleanEmail;
-        const [{ data: pesanData }, { data: akunWarga }] = await Promise.all([
-            sb.from('chat')
-                .select('*')
-                .or(`id_percakapan.eq.${idPercakapan},email_pengirim.eq.${cleanEmail},email_penerima.eq.${cleanEmail}`)
-                .order('waktu_kirim', { ascending: true }),
-            sb.from('akun').select('*').eq('email', cleanEmail).maybeSingle()
-        ]);
-        const isOnline = akunWarga && akunWarga.last_aktif ? (Date.now() - new Date(akunWarga.last_aktif).getTime() < 5 * 60 * 1000) : false;
-        return {
-            ID_Percakapan: idPercakapan,
-            Pesan: (pesanData || []).map(c => ({
-                ID_Pesan: c.id_pesan,
-                ID_Percakapan: c.id_percakapan,
-                Email_Pengirim: c.email_pengirim,
-                Nama_Pengirim: c.nama_pengirim,
-                Role_Pengirim: c.role_pengirim,
-                Email_Penerima: c.email_penerima,
-                Isi_Pesan: c.isi_pesan,
-                URL_Lampiran: c.url_lampiran,
-                Waktu_Kirim: c.waktu_kirim,
-                Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
-            })),
-            Online: isOnline,
-            Last_Aktif: akunWarga?.last_aktif || akunWarga?.last_login || '',
-            Nama_Warga: akunWarga?.nama || akunWarga?.email || cleanEmail,
-            No_Rumah: akunWarga?.no_rumah || '—',
-            Avatar: akunWarga?.foto_url || akunWarga?.foto || ''
-        };
-    },
-
-    async tandaiChatDibaca(token, idPercakapan) {
-        await sb.from('chat').update({ status_baca: 'Dibaca' }).eq('id_percakapan', idPercakapan);
-        return { ok: true };
-    },
-
-    async hapusPercakapan(token, idPercakapan) {
-        await sb.from('chat').delete().eq('id_percakapan', idPercakapan);
-        return { ok: true };
-    },
-
-    // ------------------------------------------------------------------------
     // PINDAH BLOK
     // ------------------------------------------------------------------------
     async ajukanPindahBlok(token, payload) {
@@ -1374,22 +1503,7 @@ window.SupabaseBackend = {
     },
 
     // ------------------------------------------------------------------------
-    // UPLOAD LAMPIRAN CHAT
-    // ------------------------------------------------------------------------
-    async uploadLampiranChat(token, base64Data, fileName, mimeType) {
-        const blob = base64ToBlob(base64Data, mimeType);
-        const safeName = (fileName || 'lampiran').replace(/[^\w.\-]/g, '_');
-        const path = 'chat_' + Date.now() + '_' + safeName;
-        const { error } = await sb.storage.from('kas-bukti').upload(path, blob, {
-            contentType: mimeType || 'application/octet-stream'
-        });
-        if (error) throw new Error(error.message);
-        const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
-        return { ok: true, url: pubUrl.publicUrl };
-    },
-
-    // ------------------------------------------------------------------------
-    // WHATSAPP — generate link wa.me (tanpa gateway, user klik buka)
+    // WHATSAPP
     // ------------------------------------------------------------------------
     async _namaPerumahanBendahara() {
         const { data } = await sb.from('pengaturan').select('nama_perumahan,nama_bendahara').limit(1).maybeSingle();
@@ -1397,22 +1511,6 @@ window.SupabaseBackend = {
             namaPerumahan: data?.nama_perumahan || 'Perumahan',
             namaBendahara: data?.nama_bendahara || 'Bendahara'
         };
-    },
-
-    async getUserAktifList(token) {
-        const { data } = await sb.from('akun')
-            .select('id_akun,nama,email,no_rumah,foto_url,foto,role,status,last_aktif,last_login')
-            .eq('status', 'Aktif');
-        return (data || []).map(a => ({
-            ID_Akun: a.id_akun,
-            Email: a.email,
-            Nama: a.nama || a.email,
-            No_Rumah: a.no_rumah || '—',
-            Avatar: a.foto_url || a.foto || '',
-            Role: a.role || 'warga',
-            Online: a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false,
-            Last_Aktif: a.last_aktif || a.last_login || ''
-        })).sort((a, b) => (b.Online ? 1 : 0) - (a.Online ? 1 : 0) || String(b.Last_Aktif || '').localeCompare(String(a.Last_Aktif || '')));
     },
 
     async getBerandaWarga(token) {
@@ -1555,6 +1653,79 @@ _${info.namaBendahara}_`;
             hasil: tunggakan.map(t => ({ no_rumah: t.No_Rumah, status: 'manual' })),
             message: 'Gateway WhatsApp belum aktif. Kirim satu per satu lewat tombol pengingat.'
         };
+    },
+
+    // ------------------------------------------------------------------------
+    // BUNDLE (dipakai saat pertama login)
+    // ------------------------------------------------------------------------
+    async getBundleAwal(token, opts) {
+        const profil = await this.getProfil(token);
+        const kini = new Date();
+        const bulan = Number((opts && opts.bulan) || (kini.getMonth() + 1));
+        const tahun = Number((opts && opts.tahun) || kini.getFullYear());
+
+        const [
+            pub,
+            warga,
+            trxMasuk,
+            trxKeluar,
+            akun,
+            permintaanRumah,
+            galeri,
+            pindah,
+            notif
+        ] = await Promise.all([
+            this.getPengaturanPublik(),
+            this.getWargaList(token),
+            this.getTransaksiMasuk(token),
+            this.getTransaksiKeluar(token),
+            profil && profil.Role === 'admin' ? this.getDaftarAkun(token) : Promise.resolve([]),
+            profil && profil.Role === 'admin' ? this.getPermintaanRumah(token) : Promise.resolve([]),
+            this.getGaleriList(token, null),
+            profil && profil.Role === 'admin' ? this.getPengajuanPindah(token) : this.getPengajuanPindahSaya(token),
+            this.getNotifikasi(token)
+        ]);
+
+        const out = {
+            ts: Date.now(),
+            bulan: bulan,
+            tahun: tahun,
+            profil: profil,
+            publik: pub,
+            notif: notif
+        };
+
+        if (profil && profil.Role === 'admin') {
+            out.dash = await this.getDashboardData(token);
+            out.warga = warga;
+            out.trxMasuk = trxMasuk;
+            out.trxKeluar = trxKeluar;
+            out.status = { list: await this.getStatusIuranWarga(token, bulan, tahun) };
+            out.akun = akun;
+            out.permintaanRumah = permintaanRumah;
+            out.pengAdmin = await this.getPengaturanAdmin(token);
+            out.lapBulanan = await this.getLaporanBulanan(token, bulan, tahun);
+            out.lapTahunan = await this.getLaporanTahunan(token, tahun);
+            out.galeri = galeri;
+            out.pindah = pindah;
+            out.chatList = await this.getChatPercakapanAdmin(token);
+        } else if (profil) {
+            out.beranda = {
+                namaWarga: profil.Nama,
+                noRumah: profil.No_Rumah,
+                statusBulanIni: 'Lunas',
+                totalTunggakan: 0,
+                riwayatSingkat: trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase()).slice(0, 5)
+            };
+            out.tagihan = [];
+            out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
+            out.arusKas = { trend: [] };
+            out.galeri = galeri;
+            out.pindah = pindah;
+            out.chatUnread = notif.chat || 0;
+        }
+
+        return out;
     },
 
     // ------------------------------------------------------------------------
