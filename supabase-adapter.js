@@ -47,7 +47,7 @@ const SessionStore = {
         } catch (e) { return null; }
     },
     set(token, data) {
-        data.exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        data.exp = Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 tahun (365 hari)
         localStorage.setItem('sb_sess_' + token, JSON.stringify(data));
     },
     remove(token) {

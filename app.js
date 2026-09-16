@@ -461,7 +461,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         if (pubLama) this.publik = pubLama;
                         const t = this.ambilToken();
                         
-                        // Muat data publik di latar belakang tanpa memblokir layar dengan spinner
+                        // Muat data publik di latar belakang tanpa memblokir layar
                         this.jalankan('getPengaturanPublik', []).then(pub => {
                             if (pub) { this.publik = pub; this.tulisCache('pub', pub); }
                         }).catch(() => {});
@@ -472,10 +472,29 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             return;
                         }
 
+                        // Gunakan cache profil lokal terlebih dahulu agar langsung masuk instan
+                        const profilCache = this.bacaCache('profil_saya');
+                        if (profilCache) {
+                            this.token = t;
+                            this.terapkanProfil(profilCache);
+                            if (profilCache.Status === 'Aktif') {
+                                this.page = this.isAdmin ? 'dashboard' : 'beranda';
+                            }
+                        }
+
                         let p;
-                        try { p = await this.jalankan('getProfil', [t]); } catch (e) { this.keluarPaksa(); return; }
-                        if (!p) { this.keluarPaksa(); return; }
+                        try { p = await this.jalankan('getProfil', [t]); } catch (e) { 
+                            if (!profilCache) this.keluarPaksa(); 
+                            this.loading = false; this.pendingCalls = 0; 
+                            return; 
+                        }
+                        if (!p) { 
+                            if (!profilCache) this.keluarPaksa(); 
+                            this.loading = false; this.pendingCalls = 0; 
+                            return; 
+                        }
                         this.token = t;
+                        this.tulisCache('profil_saya', p);
                         this.terapkanProfil(p);
                         if (p.Status === 'Aktif') {
                             this.page = this.isAdmin ? 'dashboard' : 'beranda';
