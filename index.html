@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -25,11 +25,11 @@
     
 
 
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script defer src="supabase-adapter.js?v=7"></script>
-    <script defer src="app.js?v=10"></script>
+    <script defer src="app.js?v=11"></script>
 </head>
 
 <body>
@@ -781,8 +781,8 @@
                         <!-- BENDAHARA -->
                         <div v-if="isAdmin" class="grid lg:grid-cols-[330px_1fr] gap-4 min-w-0">
                             <!-- daftar warga -->
-                            <div class="panel overflow-hidden flex-col min-w-0"
-                                :class="chatAktif ? 'hidden lg:flex' : 'flex'" style="max-height:72vh">
+                            <div class="panel overflow-hidden flex-col min-w-0 chat-panel-box"
+                                :class="chatAktif ? 'hidden lg:flex' : 'flex'">
                                 <div class="p-3" style="border-bottom:1px solid var(--line)">
                                     <input v-model="chatSearch" placeholder="Cari warga…" class="field">
                                 </div>
@@ -852,11 +852,8 @@
                                             :class="m.Role_Pengirim==='admin' ? 'justify-end' : 'justify-start'">
                                             <div style="max-width:78%;min-width:0">
                                                 <div class="bubble"
-                                                    :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'">
-                                                    {{ m.Isi_Pesan }}
-                                                    <a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
-                                                        class="underline text-xs block mt-1">Lihat lampiran</a>
-                                                </div>
+                                                    :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'"><span class="bubble-text">{{ m.Isi_Pesan }}</span><a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
+                                                        class="underline text-xs block mt-1">Lihat lampiran</a></div>
                                                 <p class="text-[10px] mt-0.5"
                                                     :class="m.Role_Pengirim==='admin' ? 'text-right' : ''"
                                                     style="color:var(--muted)">{{ jamPesan(m.Waktu_Kirim) }}</p>
@@ -899,11 +896,8 @@
                                     :class="m.Role_Pengirim==='warga' ? 'justify-end' : 'justify-start'">
                                     <div style="max-width:78%;min-width:0">
                                         <div class="bubble"
-                                            :class="m.Role_Pengirim==='warga' ? 'bubble-out' : 'bubble-in'">
-                                            {{ m.Isi_Pesan }}
-                                            <a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
-                                                class="underline text-xs block mt-1">Lihat lampiran</a>
-                                        </div>
+                                            :class="m.Role_Pengirim==='warga' ? 'bubble-out' : 'bubble-in'"><span class="bubble-text">{{ m.Isi_Pesan }}</span><a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
+                                                class="underline text-xs block mt-1">Lihat lampiran</a></div>
                                         <p class="text-[10px] mt-0.5"
                                             :class="m.Role_Pengirim==='warga' ? 'text-right' : ''"
                                             style="color:var(--muted)">{{ jamPesan(m.Waktu_Kirim) }}</p>
