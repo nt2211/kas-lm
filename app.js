@@ -80,7 +80,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         dash: {
                             saldo: 0, totalMasukBulanIni: 0, totalKeluarBulanIni: 0, persentaseLunas: 0, totalRumah: 0, rumahLunas: 0,
                             menungguVerifikasi: 0, akunMenunggu: 0, pindahMenunggu: 0, chatBelumDibaca: 0,
-                            trend: [], pemasukanJenis: [], pengeluaranKategori: [], statusWarga: { lunas: 0, belumLunas: 0 }, bulanIniLabel: ''
+                            trend: [], pemasukanJenis: [], pengeluaranKategori: [], statusWarga: { lunas: 0, belumLunas: 0 }, bulanIniLabel: '',
+                            userAktifList: [], totalOnline: 0
                         },
 
                         wargaList: [], listMasuk: [], listKeluar: [],
@@ -160,8 +161,11 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         return this.statusList.filter(s => (s.No_Rumah || '').toLowerCase().includes(q) || (s.Nama_Warga || '').toLowerCase().includes(q));
                     },
                     akunFiltered() {
-                        const q = this.qAkun, f = this.akunFilter;
-                        return this.akunList.filter(a => {
+                        const q = (this.qAkun || '').toLowerCase().trim();
+                        const f = this.akunFilter;
+                        const list = Array.isArray(this.akunList) ? this.akunList : [];
+                        return list.filter(a => {
+                            if (!a) return false;
                             const cocok = !q || (a.Nama || '').toLowerCase().includes(q) || (a.Email || '').toLowerCase().includes(q) || (a.No_Rumah || '').toLowerCase().includes(q);
                             return cocok && (!f || a.Status === f);
                         });
@@ -418,6 +422,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             ['trxMasuk:' + email]: b.trxMasuk,
                             ['trxKeluar:' + email]: b.trxKeluar,
                             ['akun:' + email]: b.akun,
+                            ['permintaanRumah:' + email]: b.permintaanRumah,
                             ['pengAdmin:' + email]: b.pengAdmin,
                             ['status:' + email + ':' + per]: b.status,
                             ['lapBulanan:' + email + ':' + per]: b.lapBulanan,
@@ -434,6 +439,21 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             ['pindahSaya:' + email]: b.pindah
                         };
                         Object.keys(peta).forEach(k => { if (peta[k] !== undefined && peta[k] !== null) this.tulisCache(k, peta[k]); });
+
+                        // Langsung apply ke state Vue agar halaman tidak kosong
+                        if (this.isAdmin) {
+                            if (Array.isArray(b.akun)) this.akunList = b.akun;
+                            if (Array.isArray(b.permintaanRumah)) this.permintaanRumah = b.permintaanRumah;
+                            if (Array.isArray(b.warga)) this.wargaList = b.warga;
+                            if (b.dash) { this.dash = b.dash; }
+                            if (Array.isArray(b.pindah)) this.pindahList = b.pindah;
+                            if (Array.isArray(b.chatList)) this.chatList = b.chatList;
+                        } else {
+                            if (b.beranda) this.warga = Object.assign({}, b.beranda);
+                            if (Array.isArray(b.pindah)) this.pindahSaya = b.pindah;
+                        }
+                        if (Array.isArray(b.galeri)) this.galeriList = b.galeri;
+
                         if (b.notif) this.terapkanNotif(b.notif);
                         else if (!this.isAdmin) this.warga.chatBelumDibaca = b.chatUnread || 0;
                         this.loadingText = 'Memproses';
@@ -697,8 +717,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             if (key === 'laporan') await Promise.all([this.muatLaporanBulanan(paksa), this.muatLaporanTahunan(paksa)]);
                             if (key === 'akun') {
                                 await Promise.all([
-                                    this.ambilDenganCache('akun:' + email, 'getDaftarAkun', [this.token], r => { this.akunList = r; }, paksa),
-                                    this.ambilDenganCache('permintaanRumah:' + email, 'getPermintaanRumah', [this.token], r => { this.permintaanRumah = r; }, paksa)
+                                    this.ambilDenganCache('akun:' + email, 'getDaftarAkun', [this.token], r => { this.akunList = Array.isArray(r) ? r : []; }, paksa),
+                                    this.ambilDenganCache('permintaanRumah:' + email, 'getPermintaanRumah', [this.token], r => { this.permintaanRumah = Array.isArray(r) ? r : []; }, paksa)
                                 ]);
                             }
                             if (key === 'pengaturan') {
@@ -972,15 +992,18 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     },
                     scrollChat() { const el = this.$refs.chatBox; if (el) el.scrollTop = el.scrollHeight; },
                     async bukaChatWarga(emailWarga) {
+                        if (this.page !== 'chat') {
+                            this.goTo('chat');
+                        }
                         try {
                             const r = await this.jalankan('getChatAdminDenganWarga', [this.token, emailWarga]);
                             const item = this.chatList.find(c => c.Email_Warga === emailWarga) || {};
                             this.chatAktif = {
                                 Email_Warga: emailWarga, Nama_Warga: item.Nama_Warga || emailWarga,
                                 No_Rumah: item.No_Rumah || '', Avatar: item.Avatar || '',
-                                Online: r.Online, Last_Aktif: r.Last_Aktif
+                                Online: r ? r.Online : false, Last_Aktif: r ? r.Last_Aktif : ''
                             };
-                            this.chatPesan = r.Pesan || [];
+                            this.chatPesan = (r && r.Pesan) || [];
                             await this.tandaiDibaca();
                             this.$nextTick(() => this.scrollChat());
                         } catch (e) { }

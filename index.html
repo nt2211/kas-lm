@@ -28,8 +28,8 @@
 <link rel="stylesheet" href="style.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="supabase-adapter.js?v=4"></script>
-    <script defer src="app.js?v=7"></script>
+    <script defer src="supabase-adapter.js?v=6"></script>
+    <script defer src="app.js?v=9"></script>
 </head>
 
 <body>
@@ -988,6 +988,44 @@
                                 <div class="chart-box"><canvas id="chartKategori"></canvas></div>
                             </div>
                         </div>
+
+                        <!-- ================= WARGA AKTIF & ONLINE ================= -->
+                        <div class="panel p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                                    <h3 class="font-bold">Warga Aktif & Online</h3>
+                                    <span class="chip chip-ok text-xs py-0.5 px-2">{{ dash.totalOnline || 0 }} online</span>
+                                </div>
+                                <button @click="goTo('akun')" class="text-xs font-semibold" style="color:var(--sea-700)">Lihat semua akun warga →</button>
+                            </div>
+
+                            <div v-if="dash.userAktifList && dash.userAktifList.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div v-for="u in dash.userAktifList" :key="'uact'+u.ID_Akun"
+                                    class="flex items-center gap-3 p-3 rounded-xl"
+                                    style="background:var(--card-2);border:1px solid var(--line-soft)">
+                                    <div class="relative shrink-0">
+                                        <img v-if="u.Avatar" :src="u.Avatar" class="w-10 h-10 rounded-xl object-cover" alt="">
+                                        <div v-else class="w-10 h-10 rounded-xl grid place-items-center text-xs font-bold"
+                                            style="background:var(--sea-tint);color:var(--sea-700)">
+                                            {{ inisialDari(u.Nama || u.Email) }}
+                                        </div>
+                                        <span class="absolute -bottom-0.5 -right-0.5" :class="u.Online ? 'dot-on' : 'dot-off'"></span>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <p class="font-semibold text-sm truncate">{{ u.Nama || '(belum isi nama)' }}</p>
+                                            <span v-if="u.Role==='admin'" class="chip chip-ok text-[10px] py-0 px-1">Admin</span>
+                                        </div>
+                                        <p class="t-meta text-xs truncate">Rumah {{ u.No_Rumah || '—' }} · <span :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{ u.Online ? 'Online' : (u.Last_Aktif ? 'Aktif ' + tglPendek(u.Last_Aktif) : 'Offline') }}</span></p>
+                                    </div>
+                                    <button v-if="u.Role!=='admin'" @click="bukaChatWarga(u.Email)" class="icon-btn shrink-0" title="Kirim Pesan">
+                                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <p v-else class="text-center py-6 text-sm" style="color:var(--muted)">Belum ada warga terdaftar.</p>
+                        </div>
                     </template>
 
                     <!-- ================= TRANSAKSI ADMIN ================= -->
@@ -1387,7 +1425,7 @@
 
                     <!-- ================= AKUN WARGA ================= -->
                     <template v-if="page==='akun'">
-                        <div v-if="permintaanRumah.length" class="panel p-4">
+                        <div v-if="permintaanRumah && permintaanRumah.length" class="panel p-4">
                             <h3 class="font-bold flex items-center gap-2 mb-2"><i data-lucide="home" class="w-4 h-4"
                                     style="color:var(--amber)"></i> Permintaan ubah nomor rumah</h3>
                             <div v-for="r in permintaanRumah" :key="r.ID_Akun"
@@ -1454,8 +1492,12 @@
                                             class="w-4 h-4"></i></button>
                                 </div>
                             </div>
-                            <p v-if="!akunFiltered.length" class="text-center py-10 text-sm" style="color:var(--muted)">
-                                Belum ada akun.</p>
+                            <div v-if="!akunFiltered.length" class="text-center py-10">
+                                <p class="text-sm font-semibold" style="color:var(--muted)">Belum ada akun.</p>
+                                <button @click="muatUlangHalaman" class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Segarkan data
+                                </button>
+                            </div>
                         </div>
 
                         <div class="hidden sm:block panel overflow-hidden">
@@ -1498,7 +1540,12 @@
                                             </td>
                                         </tr>
                                         <tr v-if="!akunFiltered.length">
-                                            <td colspan="8" class="text-center py-10">Belum ada akun.</td>
+                                            <td colspan="8" class="text-center py-10">
+                                                <p class="text-sm font-semibold" style="color:var(--muted)">Belum ada akun.</p>
+                                                <button @click="muatUlangHalaman" class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
+                                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Segarkan data
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
