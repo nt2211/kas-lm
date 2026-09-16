@@ -934,6 +934,36 @@ table.tbl tbody tr:hover td {
     }
 }
 
+/* ===================================================================
+   FIX #9 — Chat layar penuh di mobile
+   Saat percakapan chat dibuka (warga: selalu; bendahara: saat memilih
+   satu warga), sembunyikan appbar & tab bar bawah supaya area chat
+   memakai seluruh tinggi layar. Kondisi ini dikontrol lewat class
+   `.chat-fullscreen` pada #app (computed `chatFullscreen` di app.js),
+   dan otomatis kembali normal saat tombol "kembali" ditekan.
+   =================================================================== */
+@media (max-width: 1023px) {
+    .chat-fullscreen .appbar,
+    .chat-fullscreen .tabbar {
+        display: none !important;
+    }
+
+    .chat-fullscreen main {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .chat-fullscreen .chat-panel-box {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+    }
+
+    .chat-fullscreen .chat-page-main {
+        padding: 0 !important;
+    }
+}
+
 .dot-on {
     width: 9px;
     height: 9px;

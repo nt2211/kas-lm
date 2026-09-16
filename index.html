@@ -55,7 +55,7 @@
     </div>
 
 
-    <div id="app" v-cloak>
+    <div id="app" v-cloak :class="{ 'chat-fullscreen': chatFullscreen }">
 
         <!-- ============ LOADING ============ -->
         <div v-if="loading" class="fixed inset-0 z-[100] flex items-center justify-center no-print"
@@ -932,6 +932,8 @@
                             <!-- PERCAKAPAN WARGA DENGAN BENDAHARA (2 Kolom di Desktop) -->
                             <div class="panel flex flex-col chat-panel-box lg:col-span-2">
                                 <div class="p-3 flex items-center gap-3" style="border-bottom:1px solid var(--line)">
+                                    <button @click="kembaliDariChat" class="icon-btn lg:hidden"
+                                        aria-label="Kembali"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
                                     <div class="w-10 h-10 rounded-xl grid place-items-center font-bold"
                                         style="background:var(--sea-tint);color:var(--sea-700)">RT</div>
                                     <div class="min-w-0 flex-1">

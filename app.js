@@ -100,7 +100,7 @@ function mulaiAplikasi() {
                 lightbox: null, albumUpload: null, progressUpload: { total: 0, selesai: 0 },
 
                 chatList: [], chatSearch: '', qChat: '', chatAktif: null, chatPesan: [], chatInput: '',
-                chatAdminOnline: false, chatLampiranUrl: '', chatLampiran: null,
+                chatAdminOnline: false, chatLampiranUrl: '', chatLampiran: null, chatPrevPage: 'beranda',
                 userAktifList: [], totalOnline: 0,
                 _pollChatTimer: null, _heartbeatTimer: null, _notifTimer: null,
 
@@ -124,6 +124,13 @@ function mulaiAplikasi() {
 
         computed: {
             isAdmin() { return this.profil && this.profil.Role === 'admin'; },
+            /* Mode layar penuh untuk chat di mobile: sembunyikan appbar + tab bar
+               selama warga/bendahara sedang membuka percakapan, sampai dia menekan
+               tombol kembali. */
+            chatFullscreen() {
+                if (this.page !== 'chat') return false;
+                return this.isAdmin ? !!this.chatAktif : true;
+            },
             menuAktif() { return this.isAdmin ? this.menuAdmin : this.menuWarga; },
             bottomNav() {
                 const list = this.menuAktif;
@@ -735,10 +742,18 @@ function mulaiAplikasi() {
             goTo(key) {
                 if (this.page !== key) this.musnahkanChart();
                 if (this.page === 'chat' && key !== 'chat') this.stopPollingChat();
+                if (key === 'chat' && this.page !== 'chat') this.chatPrevPage = this.page;
                 this.page = key; this.moreSheet = false;
                 window.scrollTo({ top: 0 });
                 this.muatHalaman(key);
                 if (key === 'chat') this.$nextTick(() => this.afterMasukChat());
+            },
+            /* Tombol "kembali" saat chat sedang layar penuh (mobile).
+               Bendahara: tutup percakapan yang sedang dibuka (kembali ke daftar warga).
+               Warga: kembali ke halaman sebelum membuka chat. */
+            kembaliDariChat() {
+                if (this.isAdmin) { this.chatAktif = null; return; }
+                this.goTo(this.chatPrevPage || 'beranda');
             },
             muatUlangHalaman() { this.muatHalaman(this.page, true); this.muatNotif(); this.toast('Mengambil data terbaru.', 'info'); },
             async muatHalaman(key, paksa) {
