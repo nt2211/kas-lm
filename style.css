@@ -919,6 +919,13 @@ table.tbl tbody tr:hover td {
     /* FIX */
     -webkit-overflow-scrolling: touch;
     /* FIX */
+    /* FIX #10 — Pesan menempel ke bawah seperti WhatsApp.
+       Tanpa ini, saat pesan sedikit (belum memenuhi tinggi kontainer),
+       bubble menumpuk dari atas dengan ruang kosong di bawah, bukan
+       menempel ke dasar seperti chat pada umumnya. */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 /* ===================================================================
