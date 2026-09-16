@@ -303,10 +303,23 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     ambilToken() { try { return localStorage.getItem('kaslm_token') || null; } catch (e) { return null; } },
                     emailAktif() { return (this.profil && this.profil.Email) || 'anon'; },
 
-                    jalankan(fn, args) {
-                        return new Promise((resolve, reject) => {
-                            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn].apply(null, args || []);
-                        });
+                    async jalankan(fn, args) {
+                        try {
+                            const res = await fetch(API_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'text/plain;charset=utf-8'
+                                },
+                                body: JSON.stringify({ action: fn, args: args || [] })
+                            });
+                            const data = await res.json();
+                            if (!data.ok) {
+                                throw new Error(data.error || 'Terjadi kesalahan pada server');
+                            }
+                            return data.result;
+                        } catch (err) {
+                            throw err;
+                        }
                     },
                     call(fn) {
                         const args = Array.prototype.slice.call(arguments, 1);
