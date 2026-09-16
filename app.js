@@ -493,10 +493,20 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     terapkanProfil(p) {
                         this.profil = p;
                         this.formProfil = { Nama: p.Nama, No_HP: p.No_HP, Tema: p.Tema || 'sistem', Notif_Email: p.Notif_Email !== false, Notif_WA: p.Notif_WA !== false };
+                        
+                        let blok = '', nomor = '';
+                        if (p.No_Rumah && p.No_Rumah.includes('-')) {
+                            const parts = p.No_Rumah.split('-');
+                            blok = parts[0];
+                            nomor = parts.slice(1).join('-');
+                        }
+
                         this.formDaftar = Object.assign({}, this.formDaftar, {
-                            Nama: p.Nama || this.formDaftar.Nama,
-                            No_Rumah: p.No_Rumah || this.formDaftar.No_Rumah,
-                            No_HP: p.No_HP || this.formDaftar.No_HP
+                            Nama: p.Nama || this.formDaftar.Nama || '',
+                            Blok: blok || this.formDaftar.Blok || '',
+                            Nomor: nomor || this.formDaftar.Nomor || '',
+                            No_Rumah: p.No_Rumah || this.formDaftar.No_Rumah || '',
+                            No_HP: p.No_HP || this.formDaftar.No_HP || ''
                         });
                         this.terapkanTema(p.Tema);
                     },
@@ -642,12 +652,21 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         r.readAsDataURL(f);
                     },
                     async kirimPendaftaran() {
+                        if (!this.formDaftar.Nama) {
+                            this.toast('Nama lengkap wajib diisi.', 'error'); return;
+                        }
+                        if (!this.formDaftar.No_Rumah) {
+                            if (!this.formDaftar.Blok || !this.formDaftar.Nomor) {
+                                this.toast('Lengkapi blok dan nomor rumah.', 'error'); return;
+                            }
+                            this.formDaftar.No_Rumah = (this.formDaftar.Blok + '-' + this.formDaftar.Nomor).toUpperCase().trim();
+                        }
                         try {
                             await this.call('lengkapiPendaftaran', this.token,
                                 { Nama: this.formDaftar.Nama, No_Rumah: this.formDaftar.No_Rumah, No_HP: this.formDaftar.No_HP });
                         } catch (e) { return; }
                         await this.muatProfil();
-                        this.toast('Pendaftaran berhasil. Selamat datang!', 'success');
+                        this.toast('Data rumah berhasil disimpan. Selamat datang!', 'success');
                     },
 
                     /* ---------- navigasi ---------- */

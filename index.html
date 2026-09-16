@@ -28,8 +28,8 @@
 <link rel="stylesheet" href="style.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="supabase-adapter.js?v=3"></script>
-    <script defer src="app.js?v=6"></script>
+    <script defer src="supabase-adapter.js?v=4"></script>
+    <script defer src="app.js?v=7"></script>
 </head>
 
 <body>
@@ -184,20 +184,21 @@
         </div>
 
         <!-- ============ LENGKAPI DATA ============ -->
-        <div v-else-if="profil.Status==='Baru'" class="min-h-screen flex items-center justify-center p-6">
+        <div v-else-if="!isAdmin && (!profil.No_Rumah || profil.Status==='Baru')" class="min-h-screen flex items-center justify-center p-6">
             <div class="panel w-full max-w-md p-7">
                 <div class="w-12 h-12 rounded-2xl grid place-items-center mb-4"
                     style="background:var(--sea-tint);color:var(--sea-700)">
                     <i data-lucide="home" class="w-5 h-5"></i>
                 </div>
-                <h2 class="text-xl font-extrabold">Lengkapi data rumah Anda</h2>
-                <p class="text-sm mt-1.5 mb-5" style="color:var(--muted)">Masuk sebagai {{ profil.Email }}.</p>
+                <h2 class="text-xl font-extrabold">Lengkapi Data Rumah Anda</h2>
+                <p class="text-sm mt-1.5 mb-5" style="color:var(--muted)">Selamat datang, <b>{{ profil.Nama || profil.Email }}</b>. Silakan isi alamat rumah dan nomor WhatsApp Anda untuk melanjutkan.</p>
                 <div class="space-y-3">
-                    <div><label class="lbl">Nama lengkap</label><input v-model="formDaftar.Nama" class="field"></div>
-                    <div><label class="lbl">Nomor rumah</label><input v-model="formDaftar.No_Rumah"
-                            class="field uppercase" placeholder="L-01 atau M-05"></div>
-                    <div><label class="lbl">Nomor WhatsApp</label><input v-model="formDaftar.No_HP" class="field"
-                            inputmode="tel" placeholder="0812xxxxxxxx"></div>
+                    <div><label class="lbl">Nama Lengkap</label><input v-model="formDaftar.Nama" class="field" placeholder="Nama lengkap"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="lbl">Blok</label><input v-model="formDaftar.Blok" class="field uppercase" placeholder="L atau M"></div>
+                        <div><label class="lbl">Nomor Rumah</label><input v-model="formDaftar.Nomor" class="field uppercase" placeholder="01"></div>
+                    </div>
+                    <div><label class="lbl">Nomor WhatsApp</label><input v-model="formDaftar.No_HP" class="field" inputmode="tel" placeholder="0812xxxxxxxx"></div>
                 </div>
                 <button @click="kirimPendaftaran" class="btn btn-primary w-full mt-5">Simpan & Masuk ke Aplikasi</button>
                 <button @click="keluar" class="btn btn-ghost w-full mt-2">Keluar</button>
