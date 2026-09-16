@@ -497,6 +497,54 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                             }
                             this.formDaftar.No_Rumah = (this.formDaftar.Blok + '-' + this.formDaftar.Nomor).toUpperCase();
                         }
+
+                        // Google Identity Services (GIS) Popup - mendukung multi-akun bebas error
+                        if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                            let clientId = (this.publik && this.publik.Google_Client_Id) || '';
+                            if (!clientId) {
+                                try { clientId = await this.jalankan('getGoogleClientId', []); } catch (e) { }
+                            }
+                            if (!clientId) {
+                                clientId = '629674748384-jlugeggi5u75tbumsrhagjh1n3bqsm5l.apps.googleusercontent.com';
+                            }
+                            
+                            const client = google.accounts.oauth2.initTokenClient({
+                                client_id: clientId,
+                                scope: 'openid email profile',
+                                callback: async (tokenResponse) => {
+                                    if (tokenResponse.error) {
+                                        this.toast('Login dibatalkan: ' + (tokenResponse.error_description || tokenResponse.error), 'error');
+                                        return;
+                                    }
+                                    try {
+                                        this.loading = true;
+                                        const res = await this.jalankan('loginDenganGoogleToken', [tokenResponse.access_token]);
+                                        if (res && res.ok) {
+                                            this.simpanToken(res.token);
+                                            if (this.modeAuth === 'daftar') {
+                                                await this.jalankan('lengkapiPendaftaran', [res.token, {
+                                                    Nama: this.formDaftar.Nama,
+                                                    No_Rumah: this.formDaftar.No_Rumah,
+                                                    No_HP: this.formDaftar.No_HP
+                                                }]);
+                                            }
+                                            await this.muatProfil();
+                                            this.toast('Berhasil masuk sebagai ' + res.email, 'success');
+                                        } else {
+                                            throw new Error((res && res.message) || 'Gagal membuat sesi login.');
+                                        }
+                                    } catch (err) {
+                                        this.toast('Login gagal: ' + (err.message || err), 'error');
+                                    } finally {
+                                        this.loading = false;
+                                    }
+                                }
+                            });
+                            client.requestAccessToken({ prompt: 'select_account' });
+                            return;
+                        }
+
+                        // Fallback ke alur lama
                         const res = await this.call('getAuthUrl');
                         if (!res.ok) { this.toast(res.message, 'error'); return; }
                         this.authState = res.state;
