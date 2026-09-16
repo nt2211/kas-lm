@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="tailwind.min.css">
+    <link rel="stylesheet" href="tailwind_min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
@@ -858,7 +858,8 @@
                                         <button @click="hapusChat(chatAktif)" class="icon-btn danger"
                                             aria-label="Hapus percakapan"><i data-lucide="trash-2"
                                                 class="w-4 h-4"></i></button>
-                                                      <div ref="chatBox" class="chat-bg flex-1 overflow-y-auto p-3 space-y-2">
+                                    </div>
+                                    <div ref="chatBox" class="chat-bg flex-1 overflow-y-auto p-3 space-y-2">
                                         <div v-for="m in chatPesan" :key="m.ID_Pesan" class="flex"
                                             :class="m.Role_Pengirim==='admin' ? 'justify-end' : 'justify-start'">
                                             <div style="max-width:78%;min-width:0">
