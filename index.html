@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
@@ -75,8 +75,7 @@
                 <div class="flex items-center gap-3">
                     <div class="brand-mark w-11 h-11">LM</div>
                     <div>
-                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok
-                            L/M' }}</p>
+                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok L/M' }}</p>
                         <p class="text-xs" style="color:#8DA0B5">Kas warga, terbuka dan tercatat</p>
                     </div>
                 </div>
@@ -105,8 +104,7 @@
                     <h1 class="text-2xl font-extrabold">{{ modeAuth==='masuk' ? 'Masuk' : 'Daftar akun warga' }}</h1>
                     <p class="text-sm mt-1.5 mb-6" style="color:var(--muted)">
                         {{ modeAuth==='masuk'
-                        ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu menunggu persetujuan
-                        bendahara.'
+                        ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu menunggu persetujuan bendahara.'
                         : 'Daftarkan diri Anda sebagai pemilik rumah. Bendahara memverifikasi sebelum akun aktif.' }}
                     </p>
 
@@ -312,8 +310,7 @@
                                     </span>
                                 </div>
                                 <p class="text-sm mt-1" style="color:#A9BBCE">
-                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada
-                                    tunggakan. Terima kasih.' }}
+                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada tunggakan. Terima kasih.' }}
                                 </p>
                                 <p v-if="warga.bulanMulai" class="text-xs mt-1" style="color:#7C8FA5">Perhitungan iuran
                                     dimulai {{ warga.bulanMulai }}.</p>
@@ -425,8 +422,7 @@
                                     <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                         rupiah(t.Jumlah) }}</p>
                                 </div>
-                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
-                                    penanggung jawab' }}</p>
+                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
                                 <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                     t.Keterangan }}</p>
                                 <a v-if="t.Bukti_Nota_URL" :href="t.Bukti_Nota_URL" target="_blank"
@@ -641,8 +637,7 @@
                                     <div><label class="lbl">Nomor WhatsApp</label><input v-model="formProfil.No_HP"
                                             class="field" inputmode="tel"></div>
                                     <button @click="simpanProfil" :disabled="sedangSimpan"
-                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan
-                                        perubahan' }}</button>
+                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan perubahan' }}</button>
                                 </div>
                             </div>
 
@@ -1120,8 +1115,7 @@
                                         <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                             rupiah(t.Jumlah) }}</p>
                                     </div>
-                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
-                                        penanggung jawab' }}</p>
+                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
                                     <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                         t.Keterangan }}</p>
                                     <div class="flex items-center gap-1 mt-3 pt-3"
@@ -1619,10 +1613,8 @@
 
                                 <div class="panel p-5">
                                     <h3 class="font-bold mb-2">Status integrasi</h3>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway
-                                        WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login
-                                        Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -1999,8 +1991,7 @@
         <div v-if="waModal" class="overlay no-print" style="z-index:88">
             <div class="modal">
                 <div class="grabber"></div>
-                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat
-                    WhatsApp' }}</h3>
+                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat WhatsApp' }}</h3>
                 <p class="text-sm mb-3" style="color:var(--muted)">{{ waModal.message }}</p>
                 <pre class="text-xs whitespace-pre-wrap rounded-xl p-3 max-h-56 overflow-y-auto"
                     style="background:var(--card-2);font-family:ui-monospace,monospace">{{ waModal.pesan }}</pre>
