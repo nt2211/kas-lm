@@ -317,6 +317,15 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                     emailAktif() { return (this.profil && this.profil.Email) || 'anon'; },
 
                     async jalankan(fn, args) {
+                        // Utamakan Supabase Backend (< 50ms)
+                        if (window.SupabaseBackend && typeof window.SupabaseBackend[fn] === 'function') {
+                            try {
+                                return await window.SupabaseBackend[fn].apply(window.SupabaseBackend, args || []);
+                            } catch (err) {
+                                console.error('Supabase error on ' + fn + ':', err);
+                                throw err;
+                            }
+                        }
                         try {
                             const res = await fetch(API_URL, {
                                 method: 'POST',
