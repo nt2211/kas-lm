@@ -10,13 +10,31 @@ const SUPABASE_ANON_KEY = "sb_publishable_CdzWUiDNDRsHov5eDMZbZg_zktPzeW8";
 
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BULAN_NAMA = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 function genId(prefix) {
     return prefix + '-' + new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14) + Math.floor(Math.random() * 900 + 100);
 }
 
+function formatTanggalID(tgl) {
+    if (!tgl) return '-';
+    const d = new Date(tgl);
+    if (isNaN(d)) return String(tgl);
+    return d.getDate() + ' ' + BULAN_NAMA[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function normalisasiNoHp(hp) {
+    if (!hp) return '';
+    let n = String(hp).replace(/\D/g, '');
+    if (!n) return '';
+    if (n.startsWith('0')) n = '62' + n.slice(1);
+    else if (!n.startsWith('62')) n = '62' + n;
+    return n;
+}
 function base64ToBlob(base64, mime) {
+    if (typeof base64 === 'string' && base64.includes(',')) {
+        base64 = base64.split(',')[1];
+    }
     const byteCharacters = atob(base64);
     const byteArrays = [];
     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
@@ -284,7 +302,7 @@ window.SupabaseBackend = {
         if (data.Notif_WA !== undefined) patch.notif_wa = !!data.Notif_WA;
 
         await sb.from('akun').update(patch).eq('email', sess.email);
-        return { ok: true };
+        return { ok: true, profil: await this.getProfil(token) };
     },
 
     async updateHeartbeat(token) {
@@ -717,7 +735,7 @@ window.SupabaseBackend = {
     },
 
     async getGaleriKategori() {
-        return ['Kerja bakti','Rapat warga','Pengajian','Kegiatan olahraga','Perayaan hari besar','Kegiatan sosial','Keamanan lingkungan','Kegiatan lainnya'];
+        return ['Kerja bakti', 'Rapat warga', 'Pengajian', 'Kegiatan olahraga', 'Perayaan hari besar', 'Kegiatan sosial', 'Keamanan lingkungan', 'Kegiatan lainnya'];
     },
 
     async getPengajuanPindah(token) {
@@ -783,11 +801,13 @@ window.SupabaseBackend = {
         const akunData = resAkun.data || [];
 
         const map = {};
-        // Masukkan semua akun warga agar admin bisa langsung memilih dan mengirim pesan
+        // Semua warga langsung masuk daftar, jadi bisa dibuka walau belum ada chat
         akunData.forEach(a => {
             const email = (a.email || '').toLowerCase().trim();
             if (!email) return;
-            const isOnline = a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false;
+            const isOnline = a.last_aktif
+                ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000)
+                : false;
             map[email] = {
                 ID_Percakapan: 'CW-' + email,
                 Email_Warga: a.email,
@@ -803,9 +823,9 @@ window.SupabaseBackend = {
             };
         });
 
-        // Tumpangkan riwayat chat
         chatData.forEach(c => {
-            const partner = (c.role_pengirim === 'admin' ? c.email_penerima : c.email_pengirim || '').toLowerCase().trim();
+            const partner = (c.role_pengirim === 'admin' ? c.email_penerima : c.email_pengirim || '')
+                .toLowerCase().trim();
             if (!partner) return;
             if (!map[partner]) {
                 map[partner] = {
@@ -823,7 +843,7 @@ window.SupabaseBackend = {
                 };
             }
             if (!map[partner].Pesan_Terakhir) {
-                map[partner].Pesan_Terakhir = c.isi_pesan || '';
+                map[partner].Pesan_Terakhir = c.isi_pesan || (c.url_lampiran ? '[Lampiran]' : '');
                 map[partner].Waktu_Terakhir = c.waktu_kirim || '';
             }
             if (c.role_pengirim !== 'admin' && c.status_baca === 'Belum') {
@@ -832,15 +852,18 @@ window.SupabaseBackend = {
             map[partner].Total_Pesan++;
         });
 
-        // Urutkan: Pesan belum dibaca dulu, lalu chat terbaru, lalu warga online, lalu no rumah
         return Object.values(map).sort((a, b) => {
+            // 1) Belum dibaca paling atas
             if (a.Belum_Dibaca !== b.Belum_Dibaca) return b.Belum_Dibaca - a.Belum_Dibaca;
+            // 2) Chat terbaru berikutnya
             if (a.Waktu_Terakhir && b.Waktu_Terakhir) {
                 return new Date(b.Waktu_Terakhir).getTime() - new Date(a.Waktu_Terakhir).getTime();
             }
             if (a.Waktu_Terakhir) return -1;
             if (b.Waktu_Terakhir) return 1;
+            // 3) Online dulu
             if (a.Online !== b.Online) return (b.Online ? 1 : 0) - (a.Online ? 1 : 0);
+            // 4) Terakhir, urut no rumah
             return String(a.No_Rumah || '').localeCompare(String(b.No_Rumah || ''));
         });
     },
@@ -1197,7 +1220,7 @@ window.SupabaseBackend = {
         const profil = sess ? await this.getProfil(token) : null;
         const role = (profil && profil.Role) || payload.Role_Pengirim || 'warga';
         const myEmail = ((profil && profil.Email) || sess?.email || 'admin').toLowerCase().trim();
-        
+
         let idPercakapan = payload.ID_Percakapan;
         let emailPenerima = '';
         if (role === 'admin') {
@@ -1207,7 +1230,7 @@ window.SupabaseBackend = {
             emailPenerima = 'admin';
             if (!idPercakapan) idPercakapan = 'CW-' + myEmail;
         }
-        
+
         if (!idPercakapan || idPercakapan === 'CW-') {
             throw new Error('Tentukan warga tujuan pesan terlebih dahulu.');
         }
@@ -1282,7 +1305,10 @@ window.SupabaseBackend = {
                 Status_Baca: c.status_baca === 'Dibaca' || c.status_baca === true
             })),
             Online: isOnline,
-            Last_Aktif: akunWarga?.last_aktif || akunWarga?.last_login || ''
+            Last_Aktif: akunWarga?.last_aktif || akunWarga?.last_login || '',
+            Nama_Warga: akunWarga?.nama || akunWarga?.email || cleanEmail,
+            No_Rumah: akunWarga?.no_rumah || '—',
+            Avatar: akunWarga?.foto_url || akunWarga?.foto || ''
         };
     },
 
@@ -1345,6 +1371,190 @@ window.SupabaseBackend = {
         }).eq('id_pengajuan', idPengajuan);
 
         return { ok: true, disetujui: true, No_Rumah: p.no_rumah_tujuan };
+    },
+
+    // ------------------------------------------------------------------------
+    // UPLOAD LAMPIRAN CHAT
+    // ------------------------------------------------------------------------
+    async uploadLampiranChat(token, base64Data, fileName, mimeType) {
+        const blob = base64ToBlob(base64Data, mimeType);
+        const safeName = (fileName || 'lampiran').replace(/[^\w.\-]/g, '_');
+        const path = 'chat_' + Date.now() + '_' + safeName;
+        const { error } = await sb.storage.from('kas-bukti').upload(path, blob, {
+            contentType: mimeType || 'application/octet-stream'
+        });
+        if (error) throw new Error(error.message);
+        const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
+        return { ok: true, url: pubUrl.publicUrl };
+    },
+
+    // ------------------------------------------------------------------------
+    // WHATSAPP — generate link wa.me (tanpa gateway, user klik buka)
+    // ------------------------------------------------------------------------
+    async _namaPerumahanBendahara() {
+        const { data } = await sb.from('pengaturan').select('nama_perumahan,nama_bendahara').limit(1).maybeSingle();
+        return {
+            namaPerumahan: data?.nama_perumahan || 'Perumahan',
+            namaBendahara: data?.nama_bendahara || 'Bendahara'
+        };
+    },
+
+    async getUserAktifList(token) {
+        const { data } = await sb.from('akun')
+            .select('id_akun,nama,email,no_rumah,foto_url,foto,role,status,last_aktif,last_login')
+            .eq('status', 'Aktif');
+        return (data || []).map(a => ({
+            ID_Akun: a.id_akun,
+            Email: a.email,
+            Nama: a.nama || a.email,
+            No_Rumah: a.no_rumah || '—',
+            Avatar: a.foto_url || a.foto || '',
+            Role: a.role || 'warga',
+            Online: a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false,
+            Last_Aktif: a.last_aktif || a.last_login || ''
+        })).sort((a, b) => (b.Online ? 1 : 0) - (a.Online ? 1 : 0) || String(b.Last_Aktif || '').localeCompare(String(a.Last_Aktif || '')));
+    },
+
+    async getBerandaWarga(token) {
+        const profil = await this.getProfil(token);
+        if (!profil) return {};
+        const noRumah = (profil.No_Rumah || '').toUpperCase().trim();
+        const kini = new Date();
+        const bulanIni = kini.getMonth() + 1;
+        const tahunIni = kini.getFullYear();
+
+        const [{ data: trxData }, { data: chatData }] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').ilike('no_rumah', noRumah).order('tanggal', { ascending: false }),
+            sb.from('chat').select('status_baca').eq('email_penerima', (profil.Email || '').toLowerCase().trim()).eq('status_baca', 'Belum')
+        ]);
+
+        const riwayat = (trxData || []).map(t => ({
+            ID_Transaksi: t.id_transaksi,
+            Tanggal: t.tanggal,
+            No_Rumah: t.no_rumah,
+            Nama_Warga: t.nama_warga,
+            Jenis_Iuran: t.jenis_iuran,
+            Jumlah_Bayar: Number(t.jumlah_bayar) || 0,
+            Periode_Bulan: t.periode_bulan,
+            Periode_Tahun: t.periode_tahun,
+            Status: t.status || 'Verified',
+            Proof_URL: t.proof_url || ''
+        }));
+
+        const lunasBulanIni = riwayat.some(t =>
+            (t.Status === 'Verified' || t.Status === 'Lunas') &&
+            Number(t.Periode_Bulan) === bulanIni &&
+            Number(t.Periode_Tahun) === tahunIni
+        );
+
+        return {
+            namaWarga: profil.Nama,
+            noRumah: profil.No_Rumah,
+            statusBulanIni: lunasBulanIni ? 'Lunas' : 'Belum Lunas',
+            totalTunggakan: lunasBulanIni ? 0 : 1,
+            riwayatSingkat: riwayat.slice(0, 5),
+            chatBelumDibaca: (chatData || []).length
+        };
+    },
+
+    async _hpWarga(noRumah) {
+        if (!noRumah) return '';
+        const cleanRumah = String(noRumah).trim();
+        const { data: w } = await sb.from('warga').select('no_hp').ilike('no_rumah', cleanRumah).maybeSingle();
+        if (w && w.no_hp) return w.no_hp;
+        const { data: a } = await sb.from('akun').select('no_hp').ilike('no_rumah', cleanRumah).maybeSingle();
+        return (a && a.no_hp) || '';
+    },
+
+    async kirimNotifPembayaran(token, idTrx) {
+        const { data: t } = await sb.from('transaksi_masuk').select('*').eq('id_transaksi', idTrx).maybeSingle();
+        if (!t) return { ok: false, message: 'Transaksi tidak ditemukan.' };
+
+        const [info, hp] = await Promise.all([
+            this._namaPerumahanBendahara(),
+            this._hpWarga(t.no_rumah)
+        ]);
+
+        const pesan =
+            `*KUITANSI PEMBAYARAN KAS*
+${info.namaPerumahan}
+
+Halo ${t.nama_warga || '-'},
+
+Pembayaran Anda telah kami terima:
+• No. Kuitansi : ${t.id_transaksi}
+• Tanggal      : ${formatTanggalID(t.tanggal)}
+• Rumah        : ${t.no_rumah}
+• Jenis Iuran  : ${t.jenis_iuran}
+• Periode      : ${BULAN_NAMA[(t.periode_bulan || 1) - 1]} ${t.periode_tahun}
+• Jumlah       : Rp ${Number(t.jumlah_bayar).toLocaleString('id-ID')}
+• Metode       : ${t.metode_bayar || '-'}
+
+Terima kasih atas pembayaran Anda.
+
+_${info.namaBendahara}_`;
+
+        const nomor = normalisasiNoHp(hp);
+        if (!nomor) {
+            return {
+                mode: 'manual', hp: '', url: '', pesan,
+                message: 'Nomor WhatsApp warga belum tersimpan. Salin pesan di bawah lalu kirim manual.'
+            };
+        }
+        const url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
+        return {
+            mode: 'manual', hp: nomor, url, pesan,
+            message: 'Klik "Buka WhatsApp" untuk mengirim kuitansi.'
+        };
+    },
+
+    async kirimPengingat(token, noRumah, bulan, tahun) {
+        const b = Number(bulan) || (new Date().getMonth() + 1);
+        const th = Number(tahun) || new Date().getFullYear();
+        const [info, hp, resWarga] = await Promise.all([
+            this._namaPerumahanBendahara(),
+            this._hpWarga(noRumah),
+            sb.from('warga').select('nama_warga').eq('no_rumah', noRumah).maybeSingle()
+        ]);
+        const namaWarga = resWarga?.data?.nama_warga || 'Bapak/Ibu';
+
+        const pesan =
+            `*PENGINGAT IURAN KAS*
+${info.namaPerumahan}
+
+Halo ${namaWarga} (${noRumah}),
+
+Kami mengingatkan bahwa iuran kas untuk periode *${BULAN_NAMA[b - 1]} ${th}* belum tercatat lunas.
+
+Mohon melakukan pembayaran sesuai nominal yang berlaku, lalu unggah bukti transfer melalui aplikasi.
+
+Terima kasih atas perhatiannya.
+
+_${info.namaBendahara}_`;
+
+        const nomor = normalisasiNoHp(hp);
+        if (!nomor) {
+            return {
+                mode: 'manual', hp: '', url: '', pesan,
+                message: 'Nomor WhatsApp warga belum tersimpan. Salin pesan manual.'
+            };
+        }
+        const url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
+        return {
+            mode: 'manual', hp: nomor, url, pesan,
+            message: 'Klik "Buka WhatsApp" untuk mengirim pengingat.'
+        };
+    },
+
+    async kirimPengingatMassal(token, bulan, tahun) {
+        const b = Number(bulan) || (new Date().getMonth() + 1);
+        const th = Number(tahun) || new Date().getFullYear();
+        const tunggakan = await this.getTunggakan(token, b, th);
+        return {
+            otomatis: false,
+            hasil: tunggakan.map(t => ({ no_rumah: t.No_Rumah, status: 'manual' })),
+            message: 'Gateway WhatsApp belum aktif. Kirim satu per satu lewat tombol pengingat.'
+        };
     },
 
     // ------------------------------------------------------------------------
