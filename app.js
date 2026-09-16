@@ -1068,9 +1068,19 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw6OV1YmUcdqp8X2-dtWx3s
                         try { await this.jalankan('kirimPesanChat', [this.token, payload]); }
                         catch (e) { this.toast((e && e.message) || 'Gagal mengirim pesan.', 'error'); return; }
                         this.chatInput = ''; this.chatLampiranUrl = '';
+                        // Reset textarea height
+                        this.$nextTick(() => {
+                            const ta = this.$el.querySelector('textarea.field');
+                            if (ta) { ta.style.height = 'auto'; }
+                        });
                         if (this.isAdmin) await this.refreshChatAdmin();
                         else await this.muatChatWarga(false);
                         this.$nextTick(() => this.scrollChat());
+                    },
+                    autoResizeTA(e) {
+                        const ta = e.target;
+                        ta.style.height = 'auto';
+                        ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
                     },
                     async unggahLampiranChat(e) {
                         const file = e.target.files[0]; if (!file) return;

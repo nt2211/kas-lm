@@ -839,13 +839,44 @@
 
         /* ---------- chat ---------- */
         .bubble {
-            max-width: 80%;
-            padding: .6rem .85rem;
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
+            min-width: 0;
+            padding: .55rem .85rem;
             border-radius: 1.1rem;
             font-size: .9rem;
-            line-height: 1.5;
-            word-break: break-word;
+            line-height: 1.45;
+            word-break: normal;
+            overflow-wrap: break-word;
             white-space: pre-wrap;
+            box-sizing: border-box;
+        }
+
+        .chat-panel-box {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        @media (min-width: 1024px) {
+            .chat-panel-box {
+                height: calc(100vh - 170px);
+                max-height: 820px;
+            }
+        }
+
+        @media (max-width: 1023px) {
+            .chat-panel-box {
+                height: calc(100dvh - 58px - 66px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.25rem);
+                max-height: calc(100dvh - 58px - 66px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.25rem);
+                margin-bottom: 0;
+            }
+            .chat-page-main {
+                padding-top: .5rem !important;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+            }
         }
 
         .bubble-in {

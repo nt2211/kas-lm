@@ -25,11 +25,11 @@
     
 
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="supabase-adapter.js?v=6"></script>
-    <script defer src="app.js?v=9"></script>
+    <script defer src="supabase-adapter.js?v=7"></script>
+    <script defer src="app.js?v=10"></script>
 </head>
 
 <body>
@@ -817,8 +817,7 @@
                             </div>
 
                             <!-- percakapan -->
-                            <div class="panel flex-col min-w-0" :class="chatAktif ? 'flex' : 'hidden lg:flex'"
-                                style="min-height:64vh;max-height:78vh">
+                            <div class="panel flex-col min-w-0 chat-panel-box" :class="chatAktif ? 'flex' : 'hidden lg:flex'">
                                 <div v-if="!chatAktif" class="flex-1 grid place-items-center text-sm p-6 text-center"
                                     style="color:var(--muted)">
                                     Pilih warga di daftar untuk mulai mengobrol.
@@ -851,7 +850,7 @@
                                     <div ref="chatBox" class="chat-bg flex-1 overflow-y-auto p-3 space-y-2">
                                         <div v-for="m in chatPesan" :key="m.ID_Pesan" class="flex"
                                             :class="m.Role_Pengirim==='admin' ? 'justify-end' : 'justify-start'">
-                                            <div>
+                                            <div style="max-width:78%;min-width:0">
                                                 <div class="bubble"
                                                     :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'">
                                                     {{ m.Isi_Pesan }}
@@ -873,8 +872,8 @@
                                             <input type="file" accept="image/*,.pdf" class="hidden"
                                                 @change="unggahLampiranChat">
                                         </label>
-                                        <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" rows="1"
-                                            class="field flex-1 resize-none" placeholder="Tulis pesan…"></textarea>
+                                        <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" @input="autoResizeTA($event)" rows="1"
+                                            class="field flex-1 resize-none" style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
                                         <button @click="kirimChat" class="btn btn-primary shrink-0"
                                             style="padding:.65rem .85rem"><i data-lucide="send"
                                                 class="w-4 h-4"></i></button>
@@ -884,7 +883,7 @@
                         </div>
 
                         <!-- WARGA -->
-                        <div v-else class="panel flex flex-col" style="min-height:70vh;max-height:80vh">
+                        <div v-else class="panel flex flex-col chat-panel-box">
                             <div class="p-3 flex items-center gap-3" style="border-bottom:1px solid var(--line)">
                                 <div class="w-10 h-10 rounded-xl grid place-items-center font-bold"
                                     style="background:var(--sea-tint);color:var(--sea-700)">RT</div>
@@ -898,7 +897,7 @@
                             <div ref="chatBox" class="chat-bg flex-1 overflow-y-auto p-3 space-y-2">
                                 <div v-for="m in chatPesan" :key="m.ID_Pesan" class="flex"
                                     :class="m.Role_Pengirim==='warga' ? 'justify-end' : 'justify-start'">
-                                    <div>
+                                    <div style="max-width:78%;min-width:0">
                                         <div class="bubble"
                                             :class="m.Role_Pengirim==='warga' ? 'bubble-out' : 'bubble-in'">
                                             {{ m.Isi_Pesan }}
@@ -920,8 +919,8 @@
                                     <input type="file" accept="image/*,.pdf" class="hidden"
                                         @change="unggahLampiranChat">
                                 </label>
-                                <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" rows="1"
-                                    class="field flex-1 resize-none" placeholder="Tulis pesan…"></textarea>
+                                <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" @input="autoResizeTA($event)" rows="1"
+                                    class="field flex-1 resize-none" style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
                                 <button @click="kirimChat" class="btn btn-primary shrink-0"
                                     style="padding:.65rem .85rem"><i data-lucide="send" class="w-4 h-4"></i></button>
                             </div>
