@@ -20,12 +20,12 @@
     <script defer src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
-    
-
-    
 
 
-<link rel="stylesheet" href="style.css?v=3">
+
+
+
+    <link rel="stylesheet" href="style.css?v=3">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script defer src="supabase-adapter.js?v=7"></script>
@@ -43,7 +43,7 @@
             <p style="font-size:14px;font-weight:600;margin:0">Memuat kas warga…</p>
         </div>
     </div>
-    
+
 
     <div id="app" v-cloak>
 
@@ -78,7 +78,8 @@
                 <div class="flex items-center gap-3">
                     <div class="brand-mark w-11 h-11">LM</div>
                     <div>
-                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok L/M' }}</p>
+                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok
+                            L/M' }}</p>
                         <p class="text-xs" style="color:#8DA0B5">Kas warga, terbuka dan tercatat</p>
                     </div>
                 </div>
@@ -107,7 +108,8 @@
                     <h1 class="text-2xl font-extrabold">{{ modeAuth==='masuk' ? 'Masuk' : 'Daftar akun warga' }}</h1>
                     <p class="text-sm mt-1.5 mb-6" style="color:var(--muted)">
                         {{ modeAuth==='masuk'
-                        ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu menunggu persetujuan bendahara.'
+                        ? 'Gunakan akun Google Anda. Akun baru akan diminta melengkapi data lalu menunggu persetujuan
+                        bendahara.'
                         : 'Daftarkan diri Anda sebagai pemilik rumah. Bendahara memverifikasi sebelum akun aktif.' }}
                     </p>
 
@@ -173,7 +175,7 @@
                     <div v-else-if="modeAuth==='masuk'" class="space-y-2">
                         <label class="lbl">PIN bendahara</label>
                         <input v-model="pinInput" @keyup.enter="masukPin" type="password" inputmode="numeric"
-                            maxlength="8" class="field text-center tracking-[.5em] text-lg" placeholder="••••••">
+                            maxlength="8" class="field text-center tracking-[.5em] text-lg" placeholder="">
                         <div class="flex gap-2">
                             <button @click="pinTerbuka=false" class="btn btn-ghost flex-1">Batal</button>
                             <button @click="masukPin" class="btn btn-primary flex-1">Masuk</button>
@@ -184,23 +186,30 @@
         </div>
 
         <!-- ============ LENGKAPI DATA ============ -->
-        <div v-else-if="!isAdmin && (!profil.No_Rumah || profil.Status==='Baru')" class="min-h-screen flex items-center justify-center p-6">
+        <div v-else-if="!isAdmin && (!profil.No_Rumah || profil.Status==='Baru')"
+            class="min-h-screen flex items-center justify-center p-6">
             <div class="panel w-full max-w-md p-7">
                 <div class="w-12 h-12 rounded-2xl grid place-items-center mb-4"
                     style="background:var(--sea-tint);color:var(--sea-700)">
                     <i data-lucide="home" class="w-5 h-5"></i>
                 </div>
                 <h2 class="text-xl font-extrabold">Lengkapi Data Rumah Anda</h2>
-                <p class="text-sm mt-1.5 mb-5" style="color:var(--muted)">Selamat datang, <b>{{ profil.Nama || profil.Email }}</b>. Silakan isi alamat rumah dan nomor WhatsApp Anda untuk melanjutkan.</p>
+                <p class="text-sm mt-1.5 mb-5" style="color:var(--muted)">Selamat datang, <b>{{ profil.Nama ||
+                        profil.Email }}</b>. Silakan isi alamat rumah dan nomor WhatsApp Anda untuk melanjutkan.</p>
                 <div class="space-y-3">
-                    <div><label class="lbl">Nama Lengkap</label><input v-model="formDaftar.Nama" class="field" placeholder="Nama lengkap"></div>
+                    <div><label class="lbl">Nama Lengkap</label><input v-model="formDaftar.Nama" class="field"
+                            placeholder="Nama lengkap"></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="lbl">Blok</label><input v-model="formDaftar.Blok" class="field uppercase" placeholder="L atau M"></div>
-                        <div><label class="lbl">Nomor Rumah</label><input v-model="formDaftar.Nomor" class="field uppercase" placeholder="01"></div>
+                        <div><label class="lbl">Blok</label><input v-model="formDaftar.Blok" class="field uppercase"
+                                placeholder="L atau M"></div>
+                        <div><label class="lbl">Nomor Rumah</label><input v-model="formDaftar.Nomor"
+                                class="field uppercase" placeholder="01"></div>
                     </div>
-                    <div><label class="lbl">Nomor WhatsApp</label><input v-model="formDaftar.No_HP" class="field" inputmode="tel" placeholder="0812xxxxxxxx"></div>
+                    <div><label class="lbl">Nomor WhatsApp</label><input v-model="formDaftar.No_HP" class="field"
+                            inputmode="tel" placeholder="0812xxxxxxxx"></div>
                 </div>
-                <button @click="kirimPendaftaran" class="btn btn-primary w-full mt-5">Simpan & Masuk ke Aplikasi</button>
+                <button @click="kirimPendaftaran" class="btn btn-primary w-full mt-5">Simpan & Masuk ke
+                    Aplikasi</button>
                 <button @click="keluar" class="btn btn-ghost w-full mt-2">Keluar</button>
             </div>
         </div>
@@ -314,7 +323,8 @@
                                     </span>
                                 </div>
                                 <p class="text-sm mt-1" style="color:#A9BBCE">
-                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada tunggakan. Terima kasih.' }}
+                                    {{ warga.totalTunggakan > 0 ? 'Total yang belum dibayar tahun ini' : 'Tidak ada
+                                    tunggakan. Terima kasih.' }}
                                 </p>
                                 <p v-if="warga.bulanMulai" class="text-xs mt-1" style="color:#7C8FA5">Perhitungan iuran
                                     dimulai {{ warga.bulanMulai }}.</p>
@@ -426,7 +436,8 @@
                                     <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                         rupiah(t.Jumlah) }}</p>
                                 </div>
-                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
+                                <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
+                                    penanggung jawab' }}</p>
                                 <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                     t.Keterangan }}</p>
                                 <a v-if="t.Bukti_Nota_URL" :href="t.Bukti_Nota_URL" target="_blank"
@@ -641,7 +652,8 @@
                                     <div><label class="lbl">Nomor WhatsApp</label><input v-model="formProfil.No_HP"
                                             class="field" inputmode="tel"></div>
                                     <button @click="simpanProfil" :disabled="sedangSimpan"
-                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan perubahan' }}</button>
+                                        class="btn btn-primary w-full">{{ sedangSimpan ? 'Menyimpan…' : 'Simpan
+                                        perubahan' }}</button>
                                 </div>
                             </div>
 
@@ -817,7 +829,8 @@
                             </div>
 
                             <!-- percakapan -->
-                            <div class="panel flex-col min-w-0 chat-panel-box" :class="chatAktif ? 'flex' : 'hidden lg:flex'">
+                            <div class="panel flex-col min-w-0 chat-panel-box"
+                                :class="chatAktif ? 'flex' : 'hidden lg:flex'">
                                 <div v-if="!chatAktif" class="flex-1 grid place-items-center text-sm p-6 text-center"
                                     style="color:var(--muted)">
                                     Pilih warga di daftar untuk mulai mengobrol.
@@ -852,8 +865,23 @@
                                             :class="m.Role_Pengirim==='admin' ? 'justify-end' : 'justify-start'">
                                             <div style="max-width:78%;min-width:0">
                                                 <div class="bubble"
-                                                    :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'"><span class="bubble-text">{{ m.Isi_Pesan }}</span><a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
-                                                        class="underline text-xs block mt-1">Lihat lampiran</a></div>
+                                                    :class="m.Role_Pengirim==='admin' ? 'bubble-out' : 'bubble-in'">
+                                                    <span v-if="m.Isi_Pesan" class="bubble-text">{{ m.Isi_Pesan
+                                                        }}</span>
+                                                    <template v-if="m.URL_Lampiran">
+                                                        <a v-if="isImageUrl(m.URL_Lampiran)" :href="m.URL_Lampiran"
+                                                            target="_blank" class="block mt-1">
+                                                            <img :src="m.URL_Lampiran" loading="lazy"
+                                                                class="rounded-lg max-w-full"
+                                                                style="max-height:220px;object-fit:cover">
+                                                        </a>
+                                                        <a v-else :href="m.URL_Lampiran" target="_blank"
+                                                            class="underline text-xs flex items-center gap-1 mt-1">
+                                                            <i data-lucide="paperclip" class="w-3 h-3"></i> Lihat
+                                                            lampiran
+                                                        </a>
+                                                    </template>
+                                                </div>
                                                 <p class="text-[10px] mt-0.5"
                                                     :class="m.Role_Pengirim==='admin' ? 'text-right' : ''"
                                                     style="color:var(--muted)">{{ jamPesan(m.Waktu_Kirim) }}</p>
@@ -869,8 +897,10 @@
                                             <input type="file" accept="image/*,.pdf" class="hidden"
                                                 @change="unggahLampiranChat">
                                         </label>
-                                        <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" @input="autoResizeTA($event)" rows="1"
-                                            class="field flex-1 resize-none" style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
+                                        <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat"
+                                            @input="autoResizeTA($event)" rows="1" class="field flex-1 resize-none"
+                                            style="max-height:120px;overflow-y:auto"
+                                            placeholder="Tulis pesan…"></textarea>
                                         <button @click="kirimChat" class="btn btn-primary shrink-0"
                                             style="padding:.65rem .85rem"><i data-lucide="send"
                                                 class="w-4 h-4"></i></button>
@@ -896,8 +926,21 @@
                                     :class="m.Role_Pengirim==='warga' ? 'justify-end' : 'justify-start'">
                                     <div style="max-width:78%;min-width:0">
                                         <div class="bubble"
-                                            :class="m.Role_Pengirim==='warga' ? 'bubble-out' : 'bubble-in'"><span class="bubble-text">{{ m.Isi_Pesan }}</span><a v-if="m.URL_Lampiran" :href="m.URL_Lampiran" target="_blank"
-                                                class="underline text-xs block mt-1">Lihat lampiran</a></div>
+                                            :class="m.Role_Pengirim==='warga' ? 'bubble-out' : 'bubble-in'">
+                                            <span v-if="m.Isi_Pesan" class="bubble-text">{{ m.Isi_Pesan }}</span>
+                                            <template v-if="m.URL_Lampiran">
+                                                <a v-if="isImageUrl(m.URL_Lampiran)" :href="m.URL_Lampiran"
+                                                    target="_blank" class="block mt-1">
+                                                    <img :src="m.URL_Lampiran" loading="lazy"
+                                                        class="rounded-lg max-w-full"
+                                                        style="max-height:220px;object-fit:cover">
+                                                </a>
+                                                <a v-else :href="m.URL_Lampiran" target="_blank"
+                                                    class="underline text-xs flex items-center gap-1 mt-1">
+                                                    <i data-lucide="paperclip" class="w-3 h-3"></i> Lihat lampiran
+                                                </a>
+                                            </template>
+                                        </div>
                                         <p class="text-[10px] mt-0.5"
                                             :class="m.Role_Pengirim==='warga' ? 'text-right' : ''"
                                             style="color:var(--muted)">{{ jamPesan(m.Waktu_Kirim) }}</p>
@@ -913,8 +956,9 @@
                                     <input type="file" accept="image/*,.pdf" class="hidden"
                                         @change="unggahLampiranChat">
                                 </label>
-                                <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat" @input="autoResizeTA($event)" rows="1"
-                                    class="field flex-1 resize-none" style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
+                                <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat"
+                                    @input="autoResizeTA($event)" rows="1" class="field flex-1 resize-none"
+                                    style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
                                 <button @click="kirimChat" class="btn btn-primary shrink-0"
                                     style="padding:.65rem .85rem"><i data-lucide="send" class="w-4 h-4"></i></button>
                             </div>
@@ -988,36 +1032,49 @@
                                 <div class="flex items-center gap-2.5">
                                     <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                                     <h3 class="font-bold">Warga Aktif & Online</h3>
-                                    <span class="chip chip-ok text-xs py-0.5 px-2">{{ dash.totalOnline || 0 }} online</span>
+                                    <span class="chip chip-ok text-xs py-0.5 px-2">{{ dash.totalOnline || 0 }}
+                                        online</span>
                                 </div>
-                                <button @click="goTo('akun')" class="text-xs font-semibold" style="color:var(--sea-700)">Lihat semua akun warga →</button>
+                                <button @click="goTo('akun')" class="text-xs font-semibold"
+                                    style="color:var(--sea-700)">Lihat semua akun warga →</button>
                             </div>
 
-                            <div v-if="dash.userAktifList && dash.userAktifList.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div v-if="dash.userAktifList && dash.userAktifList.length"
+                                class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 <div v-for="u in dash.userAktifList" :key="'uact'+u.ID_Akun"
                                     class="flex items-center gap-3 p-3 rounded-xl"
                                     style="background:var(--card-2);border:1px solid var(--line-soft)">
                                     <div class="relative shrink-0">
-                                        <img v-if="u.Avatar" :src="u.Avatar" class="w-10 h-10 rounded-xl object-cover" alt="">
-                                        <div v-else class="w-10 h-10 rounded-xl grid place-items-center text-xs font-bold"
+                                        <img v-if="u.Avatar" :src="u.Avatar" class="w-10 h-10 rounded-xl object-cover"
+                                            alt="">
+                                        <div v-else
+                                            class="w-10 h-10 rounded-xl grid place-items-center text-xs font-bold"
                                             style="background:var(--sea-tint);color:var(--sea-700)">
                                             {{ inisialDari(u.Nama || u.Email) }}
                                         </div>
-                                        <span class="absolute -bottom-0.5 -right-0.5" :class="u.Online ? 'dot-on' : 'dot-off'"></span>
+                                        <span class="absolute -bottom-0.5 -right-0.5"
+                                            :class="u.Online ? 'dot-on' : 'dot-off'"></span>
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5">
-                                            <p class="font-semibold text-sm truncate">{{ u.Nama || '(belum isi nama)' }}</p>
-                                            <span v-if="u.Role==='admin'" class="chip chip-ok text-[10px] py-0 px-1">Admin</span>
+                                            <p class="font-semibold text-sm truncate">{{ u.Nama || '(belum isi nama)' }}
+                                            </p>
+                                            <span v-if="u.Role==='admin'"
+                                                class="chip chip-ok text-[10px] py-0 px-1">Admin</span>
                                         </div>
-                                        <p class="t-meta text-xs truncate">Rumah {{ u.No_Rumah || '—' }} · <span :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{ u.Online ? 'Online' : (u.Last_Aktif ? 'Aktif ' + tglPendek(u.Last_Aktif) : 'Offline') }}</span></p>
+                                        <p class="t-meta text-xs truncate">Rumah {{ u.No_Rumah || '—' }} · <span
+                                                :style="u.Online ? 'color:var(--sea-700);font-weight:600' : ''">{{
+                                                u.Online ? 'Online' : (u.Last_Aktif ? 'Aktif ' + tglPendek(u.Last_Aktif)
+                                                : 'Offline') }}</span></p>
                                     </div>
-                                    <button v-if="u.Role!=='admin'" @click="bukaChatWarga(u.Email)" class="icon-btn shrink-0" title="Kirim Pesan">
+                                    <button v-if="u.Role!=='admin'" @click="bukaChatWarga(u.Email)"
+                                        class="icon-btn shrink-0" title="Kirim Pesan">
                                         <i data-lucide="message-circle" class="w-4 h-4"></i>
                                     </button>
                                 </div>
                             </div>
-                            <p v-else class="text-center py-6 text-sm" style="color:var(--muted)">Belum ada warga terdaftar.</p>
+                            <p v-else class="text-center py-6 text-sm" style="color:var(--muted)">Belum ada warga
+                                terdaftar.</p>
                         </div>
                     </template>
 
@@ -1150,7 +1207,8 @@
                                         <p class="text-base font-extrabold num shrink-0" style="color:var(--rose)">{{
                                             rupiah(t.Jumlah) }}</p>
                                     </div>
-                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa penanggung jawab' }}</p>
+                                    <p class="t-meta mt-1">{{ tglPendek(t.Tanggal) }} · {{ t.Penanggung_Jawab || 'Tanpa
+                                        penanggung jawab' }}</p>
                                     <p v-if="t.Keterangan" class="text-sm mt-2" style="color:var(--ink-soft)">{{
                                         t.Keterangan }}</p>
                                     <div class="flex items-center gap-1 mt-3 pt-3"
@@ -1487,7 +1545,8 @@
                             </div>
                             <div v-if="!akunFiltered.length" class="text-center py-10">
                                 <p class="text-sm font-semibold" style="color:var(--muted)">Belum ada akun.</p>
-                                <button @click="muatUlangHalaman" class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
+                                <button @click="muatUlangHalaman"
+                                    class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
                                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Segarkan data
                                 </button>
                             </div>
@@ -1534,8 +1593,10 @@
                                         </tr>
                                         <tr v-if="!akunFiltered.length">
                                             <td colspan="8" class="text-center py-10">
-                                                <p class="text-sm font-semibold" style="color:var(--muted)">Belum ada akun.</p>
-                                                <button @click="muatUlangHalaman" class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
+                                                <p class="text-sm font-semibold" style="color:var(--muted)">Belum ada
+                                                    akun.</p>
+                                                <button @click="muatUlangHalaman"
+                                                    class="chip chip-btn chip-ok mt-2 inline-flex items-center gap-1.5">
                                                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Segarkan data
                                                 </button>
                                             </td>
@@ -1657,8 +1718,10 @@
 
                                 <div class="panel p-5">
                                     <h3 class="font-bold mb-2">Status integrasi</h3>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
-                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.WA_Gateway_Aktif ? 'Gateway
+                                        WhatsApp aktif.' : 'Gateway WhatsApp belum aktif.' }}</p>
+                                    <p class="text-sm" style="color:var(--muted)">{{ setForm.Login_Google_Aktif ? 'Login
+                                        Google aktif.' : 'Login Google belum dikonfigurasi.' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -2035,7 +2098,8 @@
         <div v-if="waModal" class="overlay no-print" style="z-index:88">
             <div class="modal">
                 <div class="grabber"></div>
-                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat WhatsApp' }}</h3>
+                <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat
+                    WhatsApp' }}</h3>
                 <p class="text-sm mb-3" style="color:var(--muted)">{{ waModal.message }}</p>
                 <pre class="text-xs whitespace-pre-wrap rounded-xl p-3 max-h-56 overflow-y-auto"
                     style="background:var(--card-2);font-family:ui-monospace,monospace">{{ waModal.pesan }}</pre>
@@ -2114,7 +2178,7 @@
 
     </div>
 
-    
+
 </body>
 
 </html>
