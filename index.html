@@ -1020,6 +1020,26 @@
                                     <span v-else class="text-[11px]" style="color:var(--muted)">Memuat warga…</span>
                                 </div>
 
+                                <!-- DAFTAR PERCAKAPAN (WhatsApp-like) -->
+                                <div class="lg:hidden p-2 px-3 border-b" style="border-color:var(--line);background:var(--card)">
+                                    <div class="overflow-x-auto">
+                                        <div v-for="c in chatListFiltered" :key="c.ID_Percakapan" class="inline-block mr-2">
+                                            <button @click="bukaChatWarga(c.Email_Warga)" class="p-2 rounded-lg border" style="min-width:160px">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-8 h-8 rounded-full grid place-items-center font-bold overflow-hidden" style="background:var(--sea-tint);color:var(--sea-700)">
+                                                        <img v-if="c.Avatar" :src="c.Avatar" class="w-full h-full object-cover" alt="">
+                                                        <span v-else>{{ inisialDari(c.Nama_Warga) }}</span>
+                                                    </div>
+                                                    <div class="min-w-0 text-left">
+                                                        <p class="text-sm font-semibold truncate">{{ c.Nama_Warga }}</p>
+                                                        <p class="text-xs t-meta truncate">{{ c.Pesan_Terakhir || 'Belum ada pesan' }}</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div ref="chatBox" class="chat-bg flex-1 overflow-y-auto p-3 space-y-2">
                                     <div v-for="m in chatPesan" :key="m.ID_Pesan" class="flex"
                                         :class="m.Role_Pengirim==='warga' ? 'justify-end' : 'justify-start'">

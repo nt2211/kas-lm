@@ -35,7 +35,18 @@ function base64ToBlob(base64, mime) {
     if (typeof base64 === 'string' && base64.includes(',')) {
         base64 = base64.split(',')[1];
     }
-    const byteCharacters = atob(base64);
+    // sanitize common issues: whitespace, URL-safe base64, padding
+    base64 = String(base64 || '').replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    let byteCharacters;
+    try {
+        byteCharacters = atob(base64);
+    } catch (e) {
+        // try to remove any non-base64 chars and retry
+        const cleaned = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+        try { byteCharacters = atob(cleaned); }
+        catch (e2) { throw new Error('Invalid base64 string provided'); }
+    }
     const byteArrays = [];
     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
         const slice = byteCharacters.slice(offset, offset + 512);
@@ -866,6 +877,101 @@ window.SupabaseBackend = {
             // 4) Terakhir, urut no rumah
             return String(a.No_Rumah || '').localeCompare(String(b.No_Rumah || ''));
         });
+    },
+
+    async getChatPercakapanWarga(token) {
+        const sess = SessionStore.get(token);
+        if (!sess || !sess.email) return [];
+        const myEmail = String(sess.email).toLowerCase().trim();
+        const [resChat, resAkun] = await Promise.all([
+            sb.from('chat').select('*').order('waktu_kirim', { ascending: false }),
+            sb.from('akun').select('*').neq('email', myEmail).order('no_rumah')
+        ]);
+
+        const chatData = resChat.data || [];
+        const akunData = resAkun.data || [];
+        const map = {};
+
+        akunData.forEach(a => {
+            const email = (a.email || '').toLowerCase().trim();
+            if (!email) return;
+            const isOnline = a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false;
+            map[email] = {
+                ID_Percakapan: 'CW-' + email,
+                Email_Warga: a.email,
+                Nama_Warga: a.nama || a.email,
+                No_Rumah: a.no_rumah || '—',
+                Avatar: a.foto_url || a.foto || '',
+                Online: isOnline,
+                Last_Aktif: a.last_aktif || a.last_login || '',
+                Pesan_Terakhir: '',
+                Waktu_Terakhir: '',
+                Belum_Dibaca: 0,
+                Total_Pesan: 0
+            };
+        });
+
+        chatData.forEach(c => {
+            const partner = (c.email_pengirim === myEmail ? c.email_penerima : c.email_pengirim || '').toLowerCase().trim();
+            if (!partner) return;
+            if (!map[partner]) {
+                map[partner] = {
+                    ID_Percakapan: c.id_percakapan || ('CW-' + partner),
+                    Email_Warga: partner,
+                    Nama_Warga: c.nama_pengirim || partner,
+                    No_Rumah: '—',
+                    Avatar: '',
+                    Online: false,
+                    Last_Aktif: '',
+                    Pesan_Terakhir: '',
+                    Waktu_Terakhir: '',
+                    Belum_Dibaca: 0,
+                    Total_Pesan: 0
+                };
+            }
+            if (!map[partner].Pesan_Terakhir) {
+                map[partner].Pesan_Terakhir = c.isi_pesan || (c.url_lampiran ? '[Lampiran]' : '');
+                map[partner].Waktu_Terakhir = c.waktu_kirim || '';
+            }
+            if (c.email_penerima && c.email_penerima.toLowerCase().trim() === myEmail && c.status_baca === 'Belum') {
+                map[partner].Belum_Dibaca++;
+            }
+            map[partner].Total_Pesan++;
+        });
+
+        // ensure admin contact is first
+        const arr = Object.values(map).sort((a, b) => {
+            if (a.Belum_Dibaca !== b.Belum_Dibaca) return b.Belum_Dibaca - a.Belum_Dibaca;
+            if (a.Waktu_Terakhir && b.Waktu_Terakhir) return new Date(b.Waktu_Terakhir).getTime() - new Date(a.Waktu_Terakhir).getTime();
+            if (a.Waktu_Terakhir) return -1;
+            if (b.Waktu_Terakhir) return 1;
+            if (a.Online !== b.Online) return (b.Online ? 1 : 0) - (a.Online ? 1 : 0);
+            return String(a.No_Rumah || '').localeCompare(String(b.No_Rumah || ''));
+        });
+
+        // prepend admin (if exists)
+        try {
+            const { data: adminAcc } = await sb.from('akun').select('*').eq('role', 'admin').limit(1).maybeSingle();
+            if (adminAcc) {
+                const adminEmail = (adminAcc.email || '').toLowerCase().trim();
+                const adminEntry = {
+                    ID_Percakapan: 'CW-admin',
+                    Email_Warga: adminEmail || 'admin',
+                    Nama_Warga: adminAcc.nama || 'Bendahara',
+                    No_Rumah: adminAcc.no_rumah || '—',
+                    Avatar: adminAcc.foto_url || adminAcc.foto || '',
+                    Online: adminAcc.last_aktif ? (Date.now() - new Date(adminAcc.last_aktif).getTime() < 5 * 60 * 1000) : false,
+                    Last_Aktif: adminAcc.last_aktif || adminAcc.last_login || '',
+                    Pesan_Terakhir: '', Waktu_Terakhir: '', Belum_Dibaca: 0, Total_Pesan: 0
+                };
+                // if admin already in arr, remove it first
+                const filtered = arr.filter(x => (x.Email_Warga || '').toLowerCase().trim() !== adminEmail);
+                filtered.unshift(adminEntry);
+                return filtered;
+            }
+        } catch (e) { }
+
+        return arr;
     },
 
     async getBundleAwal(token, opts) {

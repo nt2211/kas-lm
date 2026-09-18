@@ -820,7 +820,11 @@ function mulaiAplikasi() {
                     if (key === 'riwayat') await this.muatRiwayat(paksa);
                     if (key === 'galeri') await this.muatGaleri(paksa);
                     if (key === 'profil') await this.ambilDenganCache('pindahSaya:' + email, 'getPengajuanPindahSaya', [this.token], r => { this.pindahSaya = r; }, paksa);
-                    if (key === 'chat') { await this.muatChatWarga(true); this.startPollingChat(); }
+                    if (key === 'chat') {
+                        await this.ambilDenganCache('chatList:' + email, 'getChatPercakapanWarga', [this.token], r => { this.chatList = Array.isArray(r) ? r : []; }, paksa);
+                        await this.muatChatWarga(true);
+                        this.startPollingChat();
+                    }
                 }
             },
 
