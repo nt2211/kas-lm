@@ -202,8 +202,9 @@ function mulaiAplikasi() {
                 else if (this.tagihan && Array.isArray(this.tagihan.rows)) rows = this.tagihan.rows;
                 else rows = [];
                 const f = (this.tagihanFilter || '').toLowerCase();
-                if (!f || f === 'belum') return rows.filter(r => String(r.status || '').toLowerCase() !== 'lunas');
-                if (f === 'lunas') return rows.filter(r => String(r.status || '').toLowerCase() === 'lunas');
+                // Hide months outside the configured start month by default
+                if (!f || f === 'belum') return rows.filter(r => !r.diluar && String(r.status || '').toLowerCase() !== 'lunas');
+                if (f === 'lunas') return rows.filter(r => !r.diluar && String(r.status || '').toLowerCase() === 'lunas');
                 return rows;
             }
         },

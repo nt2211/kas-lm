@@ -1423,6 +1423,7 @@ window.SupabaseBackend = {
         const bulanIni = kini.getMonth() + 1;
         const tahunIni = kini.getFullYear();
 
+        // ambil transaksi dan jumlah chat belum dibaca
         const [{ data: trxData }, { data: chatData }] = await Promise.all([
             sb.from('transaksi_masuk').select('*').ilike('no_rumah', noRumah).order('tanggal', { ascending: false }),
             sb.from('chat').select('status_baca').eq('email_penerima', (profil.Email || '').toLowerCase().trim()).eq('status_baca', 'Belum')
@@ -1435,26 +1436,72 @@ window.SupabaseBackend = {
             Nama_Warga: t.nama_warga,
             Jenis_Iuran: t.jenis_iuran,
             Jumlah_Bayar: Number(t.jumlah_bayar) || 0,
-            Periode_Bulan: t.periode_bulan,
-            Periode_Tahun: t.periode_tahun,
-            Status: t.status || 'Verified',
+            Periode_Bulan: Number(t.periode_bulan),
+            Periode_Tahun: Number(t.periode_tahun),
+            Status: t.status || 'Lunas',
             Proof_URL: t.proof_url || ''
         }));
 
-        const lunasBulanIni = riwayat.some(t =>
-            (t.Status === 'Verified' || t.Status === 'Lunas') &&
-            Number(t.Periode_Bulan) === bulanIni &&
-            Number(t.Periode_Tahun) === tahunIni
-        );
+        // Tagihan per bulan (mematuhi Bulan_Mulai_Iuran / Tahun_Mulai_Iuran)
+        let tagihanObj = { rows: [] };
+        try { tagihanObj = await this.getTagihanSaya(token, tahunIni); } catch (e) { /* ignore */ }
+
+        const daftarTunggakan = (tagihanObj.rows || []).filter(r => !r.diluar && String((r.status || '')).toLowerCase() !== 'lunas');
+        const totalDibayarTahunIni = (tagihanObj.rows || []).filter(r => !r.diluar).reduce((s, r) => s + Number(r.dibayar || 0), 0);
+        const pengajuanPending = (trxData || []).filter(t => String(t.status).toLowerCase() === 'pending').length;
+
+        const lunasBulanIni = (tagihanObj.rows || []).some(r => Number(r.bulan) === bulanIni && Number(r.tahun || tahunIni) === tahunIni && String((r.status || '')).toLowerCase() === 'lunas');
+
+        const pengaturan = await this.getPengaturanPublik();
 
         return {
             namaWarga: profil.Nama,
             noRumah: profil.No_Rumah,
             statusBulanIni: lunasBulanIni ? 'Lunas' : 'Belum Lunas',
-            totalTunggakan: lunasBulanIni ? 0 : 1,
+            totalTunggakan: daftarTunggakan.length,
             riwayatSingkat: riwayat.slice(0, 5),
-            chatBelumDibaca: (chatData || []).length
+            chatBelumDibaca: (chatData || []).length,
+            daftarTunggakan: daftarTunggakan,
+            tagihan: tagihanObj,
+            totalDibayarTahunIni: totalDibayarTahunIni,
+            pengajuanPending: pengajuanPending,
+            bulanMulai: Number(pengaturan.Bulan_Mulai_Iuran || 1),
+            tahunMulai: Number(pengaturan.Tahun_Mulai_Iuran || tahunIni),
+            kasUmum: { nominal: Number(pengaturan.Nominal_Kas_Bulanan || 150000), totalDibayarTahunIni }
         };
+    },
+
+    async getTagihanSaya(token, tahun) {
+        const profil = await this.getProfil(token);
+        if (!profil) return { bulanMulai: 1, rows: [] };
+        const noRumah = (profil.No_Rumah || '').toUpperCase().trim();
+        const th = Number(tahun) || (new Date().getFullYear());
+        const peng = await this.getPengaturanPublik();
+        const bulanMulai = Number(peng.Bulan_Mulai_Iuran || 1);
+        const tahunMulai = Number(peng.Tahun_Mulai_Iuran || th);
+        const nominal = Number(peng.Nominal_Kas_Bulanan || 150000);
+
+        const { data: transaksi } = await sb.from('transaksi_masuk').select('*').ilike('no_rumah', noRumah).eq('periode_tahun', th);
+        const raw = transaksi || [];
+
+        const rows = [];
+        for (let b = 1; b <= 12; b++) {
+            const ent = raw.filter(t => Number(t.periode_bulan) === b);
+            const dibayar = ent.reduce((s, t) => s + Number(t.jumlah_bayar || 0), 0);
+            const lunas = ent.find(t => String(t.status).toLowerCase() === 'lunas' || String(t.status).toLowerCase() === 'verified');
+            const pending = ent.find(t => String(t.status).toLowerCase() === 'pending');
+            const diluar = (th < tahunMulai) || (th === tahunMulai && b < bulanMulai);
+
+            let status = 'Belum Bayar';
+            if (diluar) status = 'Di luar periode iuran';
+            else if (lunas) status = 'Lunas';
+            else if (pending) status = 'Menunggu Verifikasi';
+            else if (dibayar > 0 && dibayar < nominal) status = 'Kurang Bayar';
+
+            rows.push({ bulan: b, tahun: th, label: BULAN_NAMA[b - 1] + ' ' + th, tagihan: nominal, dibayar: dibayar, status: status, diluar: !!diluar });
+        }
+
+        return { bulanMulai: bulanMulai, tahunMulai: tahunMulai, nominal: nominal, rows };
     },
 
     async _hpWarga(noRumah) {
