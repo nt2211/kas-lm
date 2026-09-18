@@ -730,7 +730,7 @@ function mulaiAplikasi() {
                 this.lightbox = null; this.chatAktif = null; this.chatPesan = [];
                 this.notif = { transaksi: 0, akun: 0, pindah: 0, chat: 0 };
             },
-            pilihFotoDaftar(e) {
+            async pilihFotoDaftar(e) {
                 const f = e.target.files[0]; if (!f) return;
                 if (f.size > 3 * 1024 * 1024) { this.toast('Foto maksimal 3 MB.', 'error'); e.target.value = ''; return; }
                 try {
@@ -908,7 +908,7 @@ function mulaiAplikasi() {
                 await this.muatTransaksi(true);
             },
 
-            unggah(e, target) {
+            async unggah(e, target) {
                 const file = e.target.files[0]; if (!file) return;
                 if (file.size > 8 * 1024 * 1024) { this.toast('Ukuran maksimal 8 MB.', 'error'); e.target.value = ''; return; }
                 try {
