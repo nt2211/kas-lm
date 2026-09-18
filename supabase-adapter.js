@@ -1444,7 +1444,32 @@ window.SupabaseBackend = {
         const pemasukanJenis = Object.keys(jnsMap).map(k => ({ jenis: k, jumlah: jnsMap[k] }));
         const pengeluaranKategori = Object.keys(katMap).map(k => ({ kategori: k, jumlah: katMap[k] }));
 
-        return { trend, pemasukanJenis, pengeluaranKategori, daftarKeluar: rawKeluar.filter(k => new Date(k.tanggal).getFullYear() === th) };
+        const daftarKeluar = (rawKeluar.filter(k => new Date(k.tanggal).getFullYear() === th) || []).map(k => ({
+            Tanggal: k.tanggal,
+            Kategori_Pengeluaran: k.kategori_pengeluaran,
+            Jumlah: Number(k.jumlah),
+            Penanggung_Jawab: k.penanggung_jawab || '',
+            Keterangan: k.keterangan || '',
+            Bukti_Nota_URL: k.bukti_nota_url || ''
+        }));
+
+        // totals
+        const totalMasukBulanIni = rawMasuk.filter(t => t.status === 'Lunas' && Number(t.periode_bulan) === bulanIni && Number(t.periode_tahun) === th).reduce((s, t) => s + Number(t.jumlah_bayar || 0), 0);
+        const totalKeluarBulanIni = rawKeluar.filter(k => { const d = new Date(k.tanggal); return (d.getMonth() + 1) === bulanIni && d.getFullYear() === th; }).reduce((s, k) => s + Number(k.jumlah || 0), 0);
+        const totalMasukAll = rawMasuk.filter(t => t.status === 'Lunas').reduce((s, t) => s + Number(t.jumlah_bayar || 0), 0);
+        const totalKeluarAll = rawKeluar.reduce((s, k) => s + Number(k.jumlah || 0), 0);
+
+        return {
+            trend,
+            pemasukanJenis,
+            pengeluaranKategori,
+            daftarKeluar,
+            saldo: totalMasukAll - totalKeluarAll,
+            bulanIniLabel: BULAN_NAMA[bulanIni - 1] + ' ' + th,
+            totalMasukBulanIni: totalMasukBulanIni,
+            totalKeluarBulanIni: totalKeluarBulanIni,
+            totalKeluarTahun: daftarKeluar.reduce((s, k) => s + Number(k.Jumlah || 0), 0)
+        };
     },
 
     async getBerandaWarga(token) {
@@ -1480,6 +1505,7 @@ window.SupabaseBackend = {
 
         const daftarTunggakan = (tagihanObj.rows || []).filter(r => !r.diluar && String((r.status || '')).toLowerCase() !== 'lunas');
         const totalDibayarTahunIni = (tagihanObj.rows || []).filter(r => !r.diluar).reduce((s, r) => s + Number(r.dibayar || 0), 0);
+        const totalTunggakanNominal = daftarTunggakan.reduce((s, r) => s + Number(r.kurang || 0), 0);
         const pengajuanPending = (trxData || []).filter(t => String(t.status).toLowerCase() === 'pending').length;
 
         const lunasBulanIni = (tagihanObj.rows || []).some(r => Number(r.bulan) === bulanIni && Number(r.tahun || tahunIni) === tahunIni && String((r.status || '')).toLowerCase() === 'lunas');
@@ -1490,7 +1516,7 @@ window.SupabaseBackend = {
             namaWarga: profil.Nama,
             noRumah: profil.No_Rumah,
             statusBulanIni: lunasBulanIni ? 'Lunas' : 'Belum Lunas',
-            totalTunggakan: daftarTunggakan.length,
+            totalTunggakan: totalTunggakanNominal,
             riwayatSingkat: riwayat.slice(0, 5),
             chatBelumDibaca: (chatData || []).length,
             daftarTunggakan: daftarTunggakan,
@@ -1499,7 +1525,7 @@ window.SupabaseBackend = {
             pengajuanPending: pengajuanPending,
             bulanMulai: Number(pengaturan.Bulan_Mulai_Iuran || 1),
             tahunMulai: Number(pengaturan.Tahun_Mulai_Iuran || tahunIni),
-            kasUmum: { nominal: Number(pengaturan.Nominal_Kas_Bulanan || 150000), totalDibayarTahunIni }
+            kasUmum: { nominal: Number(pengaturan.Nominal_Kas_Bulanan || 150000), totalDibayarTahunIni, saldo: totalDibayarTahunIni }
         };
     },
 
@@ -1530,7 +1556,8 @@ window.SupabaseBackend = {
             else if (pending) status = 'Menunggu Verifikasi';
             else if (dibayar > 0 && dibayar < nominal) status = 'Kurang Bayar';
 
-            rows.push({ bulan: b, tahun: th, label: BULAN_NAMA[b - 1] + ' ' + th, tagihan: nominal, dibayar: dibayar, status: status, diluar: !!diluar });
+            const kurang = Math.max(0, nominal - dibayar);
+            rows.push({ bulan: b, tahun: th, label: BULAN_NAMA[b - 1] + ' ' + th, tagihan: nominal, dibayar: dibayar, kurang: kurang, status: status, diluar: !!diluar });
         }
 
         return { bulanMulai: bulanMulai, tahunMulai: tahunMulai, nominal: nominal, rows };
