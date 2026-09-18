@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0C131C">
-    <title>Kas Perumahan Blok L/M</title>
+    <title>Kas Asofa Blok L/M</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,7 +88,7 @@
                 <div class="flex items-center gap-3">
                     <div class="brand-mark w-11 h-11">LM</div>
                     <div>
-                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Perumahan Blok L/M' }}</p>
+                        <p class="font-extrabold leading-tight text-white">{{ publik.Nama_Perumahan || 'Asofa Blok L/M' }}</p>
                         <p class="text-xs" style="color:#8DA0B5">Kas warga, terbuka dan tercatat</p>
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                         jejaknya.</h2>
                     <p class="mt-5 text-[15px] leading-relaxed" style="color:#A9BBCE">
                         Lihat tagihan bulan ini, riwayat pembayaran, arus kas lingkungan, galeri kegiatan, dan hubungi
-                        bendahara langsung dari satu tempat.
+                        Admin langsung dari satu tempat.
                     </p>
                 </div>
                 <p class="text-xs" style="color:#6B7C91">Dikelola oleh {{ publik.Nama_Bendahara || 'bendahara RT' }}</p>
@@ -108,7 +108,7 @@
                     <div class="lg:hidden flex items-center gap-3 mb-9">
                         <div class="brand-mark w-11 h-11">LM</div>
                         <div>
-                            <p class="font-extrabold leading-tight">{{ publik.Nama_Perumahan || 'Perumahan Blok L/M' }}
+                            <p class="font-extrabold leading-tight">{{ publik.Nama_Perumahan || 'Asofa Blok L/M' }}
                             </p>
                             <p class="t-meta">Kas warga digital</p>
                         </div>
@@ -176,10 +176,10 @@
 
                     <div v-if="modeAuth==='masuk' && !pinTerbuka">
                         <button @click="pinTerbuka=true" class="btn btn-ghost w-full"><i data-lucide="key-round"
-                                class="w-4 h-4"></i> Masuk sebagai bendahara dengan PIN</button>
+                                class="w-4 h-4"></i> Masuk sebagai Admin dengan PIN</button>
                     </div>
                     <div v-else-if="modeAuth==='masuk'" class="space-y-2">
-                        <label class="lbl">PIN bendahara</label>
+                        <label class="lbl">PIN Admin</label>
                         <input v-model="pinInput" @keyup.enter="masukPin" type="password" inputmode="numeric"
                             maxlength="8" class="field text-center tracking-[.5em] text-lg" placeholder="">
                         <div class="flex gap-2">
@@ -233,7 +233,7 @@
                 </p>
                 <a v-if="publik.WA_Bendahara" :href="formatWaUrl(publik.WA_Bendahara)" target="_blank" rel="noopener noreferrer"
                     class="btn btn-ghost w-full mt-4">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i> Hubungi bendahara
+                    <i data-lucide="message-circle" class="w-4 h-4"></i> Hubungi Admin
                 </a>
                 <div class="flex gap-2 mt-2">
                     <button @click="muatProfil" class="btn btn-ghost flex-1">Periksa lagi</button>
@@ -299,7 +299,7 @@
                         </div>
                         <div class="flex items-center gap-1">
                             <span v-if="isAdmin" class="chip chip-ok hidden md:inline-flex"><i
-                                    data-lucide="shield-check" class="w-3.5 h-3.5"></i> Bendahara</span>
+                                    data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin</span>
                             <button @click="muatUlangHalaman" class="icon-btn" aria-label="Muat ulang"><i
                                     data-lucide="refresh-cw" class="w-[19px] h-[19px]"></i></button>
                             <button @click="toggleDark" class="icon-btn" aria-label="Ganti tema"><i
@@ -382,7 +382,7 @@
                                     <div v-if="publik.Rekening_Tujuan"><span class="t-label">Rekening tujuan</span>
                                         <p class="font-semibold break-all">{{ publik.Rekening_Tujuan }}</p>
                                     </div>
-                                    <div v-if="publik.Nama_Bendahara"><span class="t-label">Bendahara</span>
+                                    <div v-if="publik.Nama_Bendahara"><span class="t-label">Admin</span>
                                         <p class="font-semibold">{{ publik.Nama_Bendahara }}</p>
                                     </div>
                                 </div>
@@ -727,7 +727,7 @@
                                 <div class="panel p-5">
                                     <h3 class="font-bold">Nomor rumah</h3>
                                     <p class="text-sm mt-1 mb-4" style="color:var(--muted)">Perubahan harus disetujui
-                                        bendahara.</p>
+                                        Admin.</p>
                                     <div class="p-3 rounded-xl text-sm font-semibold mb-3"
                                         style="background:var(--card-2)">{{ profil.No_Rumah || 'Belum ditautkan' }}
                                     </div>
@@ -1060,7 +1060,7 @@
                                                 <p class="text-[10px] mt-0.5" :class="m.Role_Pengirim==='warga' ? 'text-right' : ''" style="color:var(--muted)">{{ jamPesan(m.Waktu_Kirim) }}</p>
                                             </div>
                                         </div>
-                                        <p v-if="!chatPesan.length" class="text-center py-10 text-sm" style="color:var(--muted)">Mulai percakapan dengan bendahara.</p>
+                                        <p v-if="!chatPesan.length" class="text-center py-10 text-sm" style="color:var(--muted)">Mulai percakapan dengan Admin.</p>
                                     </div>
 
                                     <div v-if="chatLampiran" class="mx-3 mt-2 p-2 px-3 flex items-center justify-between gap-3 rounded-xl" style="background:var(--card-2);border:1px solid var(--line)">
@@ -2070,7 +2070,7 @@
             <div class="modal">
                 <div class="grabber"></div>
                 <h3 class="text-lg font-extrabold">Konfirmasi pembayaran</h3>
-                <p class="text-sm mb-4" style="color:var(--muted)">Bendahara akan memeriksa lalu mengirim kuitansi.</p>
+                <p class="text-sm mb-4" style="color:var(--muted)">Admin akan memeriksa lalu mengirim kuitansi.</p>
                 <div v-if="publik.QR_Code_URL" class="text-center mb-3">
                     <img :src="publik.QR_Code_URL" class="w-full max-w-[180px] mx-auto rounded-2xl bg-white"
                         style="border:1px solid var(--line)" alt="">

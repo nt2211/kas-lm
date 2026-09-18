@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * KAS PERUMAHAN BLOK L/M — SUPABASE ADAPTER (LENGKAP SEMUA FITUR)
+ * KAS Asofa Blok L/M — SUPABASE ADAPTER (LENGKAP SEMUA FITUR)
  * Super cepat (< 50ms), Realtime, 100% Free PostgreSQL & Storage
  * ============================================================================
  */
@@ -109,10 +109,10 @@ window.SupabaseBackend = {
         const { data } = await sb.from('pengaturan').select('*').limit(1).maybeSingle();
         if (!data) {
             return {
-                Nama_Perumahan: 'Perumahan Blok L/M',
+                Nama_Perumahan: 'Asofa Blok L/M',
                 Nominal_Kas_Bulanan: 150000,
                 Rekening_Tujuan: '1234567890 a.n. Bendahara - BCA',
-                Nama_Bendahara: 'Bendahara RT',
+                Nama_Bendahara: 'Bendahara',
                 WA_Bendahara: '',
                 QR_Code_URL: '',
                 Metode_Pembayaran: 'Transfer Bank',
@@ -124,7 +124,7 @@ window.SupabaseBackend = {
             };
         }
         return {
-            Nama_Perumahan: data.nama_perumahan || 'Perumahan Blok L/M',
+            Nama_Perumahan: data.nama_perumahan || 'Asofa Blok L/M',
             Nominal_Kas_Bulanan: Number(data.nominal_kas_bulanan) || 150000,
             Rekening_Tujuan: data.rekening_tujuan || '',
             Nama_Bendahara: data.nama_bendahara || '',
@@ -142,7 +142,7 @@ window.SupabaseBackend = {
     async getPengaturanAdmin(token) {
         const { data } = await sb.from('pengaturan').select('*').limit(1).maybeSingle();
         return {
-            Nama_Perumahan: data?.nama_perumahan || 'Perumahan Blok L/M',
+            Nama_Perumahan: data?.nama_perumahan || 'Asofa Blok L/M',
             Nominal_Kas_Bulanan: Number(data?.nominal_kas_bulanan || 150000),
             Rekening_Tujuan: data?.rekening_tujuan || '',
             Nama_Bendahara: data?.nama_bendahara || '',
@@ -187,7 +187,7 @@ window.SupabaseBackend = {
         if (sess.pin) {
             return {
                 Email: '',
-                Nama: 'Bendahara (PIN)',
+                Nama: 'Admin (PIN)',
                 Role: 'admin',
                 Status: 'Aktif',
                 No_Rumah: '',
