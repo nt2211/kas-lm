@@ -1008,14 +1008,20 @@
                                 </div>
 
                                 <!-- BAR CLIENT / WARGA AKTIF (Mobile) -->
-                                <div class="lg:hidden p-2 px-3 border-b flex items-center gap-2 overflow-x-auto" style="border-color:var(--line);background:var(--card-2)">
+                                <div class="lg:hidden p-2 px-3 border-b chat-active-bar" style="border-color:var(--line);background:var(--card-2)">
                                     <span class="text-[11px] font-bold shrink-0" style="color:var(--sea-700)">Warga Aktif:</span>
-                                    <div v-if="userAktifList && userAktifList.length" class="flex items-center gap-1.5">
-                                        <div v-for="u in userAktifList" :key="'mw'+u.ID_Akun" class="relative shrink-0 flex items-center gap-1 bg-[var(--card)] py-0.5 px-2 rounded-full border border-[var(--line)] text-[11px]">
-                                            <span :class="u.Online ? 'dot-on' : 'dot-off'" class="scale-75"></span>
-                                            <span class="font-semibold">{{ u.Nama.split(' ')[0] }}</span>
-                                            <span class="text-[10px]" style="color:var(--muted)">({{ u.No_Rumah }})</span>
-                                        </div>
+                                    <div v-if="userAktifList && userAktifList.length" class="user-active-list">
+                                        <button v-for="u in userAktifList" :key="'mw'+u.ID_Akun" @click="bukaChatWarga(u.Email)" class="user-chip" :title="u.Nama">
+                                            <div class="user-chip-left">
+                                                <img v-if="u.Avatar" :src="u.Avatar" class="user-chip-img" alt="">
+                                                <div v-else class="avatar-initial">{{ inisialDari(u.Nama || u.Email) }}</div>
+                                                <span :class="u.Online ? 'dot-on' : 'dot-off'" style="margin-left:6px"></span>
+                                            </div>
+                                            <div class="user-chip-body">
+                                                <div class="user-chip-name">{{ (u.Nama || u.Email).split(' ')[0] }}</div>
+                                                <div class="user-chip-meta">{{ u.No_Rumah || '—' }}</div>
+                                            </div>
+                                        </button>
                                     </div>
                                     <span v-else class="text-[11px]" style="color:var(--muted)">Memuat warga…</span>
                                 </div>
