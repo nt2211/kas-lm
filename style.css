@@ -998,17 +998,21 @@ table.tbl tbody tr:hover td {
 }
 
 /* Online users bar (mobile) */
-.chat-active-bar { display:flex; align-items:center; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling: touch; padding-top:.5rem; padding-bottom:.5rem }
-.user-active-list { display:flex; gap:.5rem; align-items:center; padding-left:.5rem }
-.user-chip { display:inline-flex; align-items:center; gap:.5px; background:var(--card); border:1px solid var(--line); padding:.25rem .5rem; border-radius:999px; min-width:0; cursor:pointer }
-.user-chip-left { display:flex; align-items:center; gap:0.4rem; flex-shrink:0 }
-.user-chip-img, .avatar-initial { width:30px; height:30px; border-radius:8px; object-fit:cover; display:block; font-weight:700; font-size:12px; color:var(--sea-700); background:var(--sea-tint); display:grid; place-items:center }
-.user-chip-body { display:flex; flex-direction:column; align-items:flex-start; min-width:0; margin-left:.45rem }
-.user-chip-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:8rem }
-.user-chip-meta { font-size:10px; color:var(--muted); line-height:1 }
+.chat-active-bar { display:flex; align-items:center; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling: touch; padding-top:.6rem; padding-bottom:.6rem; position:relative; z-index:6; height:76px }
+.user-active-list-vertical { display:flex; gap:.5rem; align-items:center; padding-left:.5rem }
+.user-chip-vertical { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.3rem; background:transparent; border:none; padding:.15rem; min-width:56px; cursor:pointer }
+.user-avatar-wrap { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center }
+.user-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; display:block; background:var(--sea-tint); color:var(--sea-700); font-weight:700 }
+.avatar-initial { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--sea-tint); color:var(--sea-700); font-weight:700 }
+.user-online-dot { position:absolute; right:-4px; bottom:-4px; width:11px; height:11px; border-radius:50%; box-shadow:0 0 0 2px rgba(0,0,0,0.03) }
+.user-name { font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; color:var(--ink) }
+
+/* reserve space so chat messages don't overlap the user bar */
+.chat-bg { padding-top: 86px; }
 
 @media (min-width: 1024px) {
     .chat-active-bar { display:none }
+    .chat-bg { padding-top: 0 }
 }
 
 /* ---------- grafik ---------- */
