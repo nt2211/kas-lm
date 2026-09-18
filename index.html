@@ -974,7 +974,7 @@
                                         </button>
                                     </div>
 
-                                    <div class="p-2.5 flex gap-2 items-end safe-bottom"
+                                    <div class="p-2.5 flex gap-2 items-end safe-bottom chat-input"
                                         style="border-top:1px solid var(--line)">
                                         <label class="icon-btn shrink-0 cursor-pointer" title="Lampirkan foto / file">
                                             <i data-lucide="paperclip" class="w-[18px] h-[18px]"></i>
@@ -982,7 +982,7 @@
                                                 @change="pilihLampiranChat">
                                         </label>
                                         <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat"
-                                            @input="autoResizeTA($event)" rows="1" class="field flex-1 resize-none"
+                                            @input="autoResizeTA($event)" @focus="scrollChat" rows="1" class="field flex-1 resize-none"
                                             style="max-height:120px;overflow-y:auto"
                                             placeholder="Tulis pesan…"></textarea>
                                         <button @click="kirimChat" class="btn btn-primary shrink-0"
@@ -1089,7 +1089,7 @@
                                     </button>
                                 </div>
 
-                                <div class="p-2.5 flex gap-2 items-end safe-bottom"
+                                <div class="p-2.5 flex gap-2 items-end safe-bottom chat-input"
                                     style="border-top:1px solid var(--line)">
                                     <label class="icon-btn shrink-0 cursor-pointer" title="Lampirkan foto / file">
                                         <i data-lucide="paperclip" class="w-[18px] h-[18px]"></i>
@@ -1097,7 +1097,7 @@
                                             @change="pilihLampiranChat">
                                     </label>
                                     <textarea v-model="chatInput" @keydown.enter.exact.prevent="kirimChat"
-                                        @input="autoResizeTA($event)" rows="1" class="field flex-1 resize-none"
+                                        @input="autoResizeTA($event)" @focus="scrollChat" rows="1" class="field flex-1 resize-none"
                                         style="max-height:120px;overflow-y:auto" placeholder="Tulis pesan…"></textarea>
                                     <button @click="kirimChat" class="btn btn-primary shrink-0"
                                         style="padding:.65rem .85rem"><i data-lucide="send" class="w-4 h-4"></i></button>

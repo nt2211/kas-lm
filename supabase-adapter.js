@@ -901,46 +901,35 @@ window.SupabaseBackend = {
         const sess = SessionStore.get(token);
         if (!sess || !sess.email) return [];
         const myEmail = String(sess.email).toLowerCase().trim();
+        // only fetch chat rows where the user is involved (sender or receiver)
         const [resChat, resAkun] = await Promise.all([
-            sb.from('chat').select('*').order('waktu_kirim', { ascending: false }),
-            sb.from('akun').select('*').neq('email', myEmail).order('no_rumah')
+            sb.from('chat').select('*').or(`email_pengirim.eq.${myEmail},email_penerima.eq.${myEmail}`).order('waktu_kirim', { ascending: false }),
+            sb.from('akun').select('*').order('no_rumah')
         ]);
 
         const chatData = resChat.data || [];
-        const akunData = resAkun.data || [];
+        const akunData = (resAkun.data || []).reduce((m, a) => {
+            const e = (a.email || '').toLowerCase().trim(); if (e) m[e] = a; return m;
+        }, {});
         const map = {};
 
-        akunData.forEach(a => {
-            const email = (a.email || '').toLowerCase().trim();
-            if (!email) return;
-            const isOnline = a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false;
-            map[email] = {
-                ID_Percakapan: 'CW-' + email,
-                Email_Warga: a.email,
-                Nama_Warga: a.nama || a.email,
-                No_Rumah: a.no_rumah || '—',
-                Avatar: a.foto_url || a.foto || '',
-                Online: isOnline,
-                Last_Aktif: a.last_aktif || a.last_login || '',
-                Pesan_Terakhir: '',
-                Waktu_Terakhir: '',
-                Belum_Dibaca: 0,
-                Total_Pesan: 0
-            };
-        });
-
+        // Build partner entries only from chat rows that involve current user
         chatData.forEach(c => {
-            const partner = (c.email_pengirim === myEmail ? c.email_penerima : c.email_pengirim || '').toLowerCase().trim();
+            const from = (c.email_pengirim || '').toLowerCase().trim();
+            const to = (c.email_penerima || '').toLowerCase().trim();
+            if (from !== myEmail && to !== myEmail) return; // ignore unrelated rows
+            const partner = (from === myEmail ? to : from) || '';
             if (!partner) return;
             if (!map[partner]) {
+                const acc = akunData[partner] || {};
                 map[partner] = {
                     ID_Percakapan: c.id_percakapan || ('CW-' + partner),
                     Email_Warga: partner,
-                    Nama_Warga: c.nama_pengirim || partner,
-                    No_Rumah: '—',
-                    Avatar: '',
-                    Online: false,
-                    Last_Aktif: '',
+                    Nama_Warga: acc.nama || c.nama_pengirim || partner,
+                    No_Rumah: acc.no_rumah || '—',
+                    Avatar: acc.foto_url || acc.foto || '',
+                    Online: acc.last_aktif ? (Date.now() - new Date(acc.last_aktif).getTime() < 5 * 60 * 1000) : false,
+                    Last_Aktif: acc.last_aktif || acc.last_login || '',
                     Pesan_Terakhir: '',
                     Waktu_Terakhir: '',
                     Belum_Dibaca: 0,
@@ -951,7 +940,7 @@ window.SupabaseBackend = {
                 map[partner].Pesan_Terakhir = c.isi_pesan || (c.url_lampiran ? '[Lampiran]' : '');
                 map[partner].Waktu_Terakhir = c.waktu_kirim || '';
             }
-            if (c.email_penerima && c.email_penerima.toLowerCase().trim() === myEmail && c.status_baca === 'Belum') {
+            if (to === myEmail && c.status_baca === 'Belum') {
                 map[partner].Belum_Dibaca++;
             }
             map[partner].Total_Pesan++;

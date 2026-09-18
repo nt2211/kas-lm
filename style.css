@@ -172,6 +172,17 @@ h4 {
     transition: transform .26s cubic-bezier(.2, .8, .25, 1)
 }
 
+/* Chat layout fixes: make message area scrollable and keep input fixed at bottom */
+.chat-page-main { min-height: 0; }
+.chat-panel-box { display: flex; flex-direction: column; min-height: 0; }
+.chat-panel-box .chat-bg { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4.5rem; }
+.chat-panel-box .chat-input { position: sticky; bottom: 0; z-index: 3; background: transparent; padding-top: .5rem; padding-bottom: env(safe-area-inset-bottom); }
+.chat-panel-box .chat-input .field { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+    .chat-panel-box .chat-bg { padding-bottom: 6.2rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;
