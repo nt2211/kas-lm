@@ -998,7 +998,7 @@ table.tbl tbody tr:hover td {
 }
 
 /* Online users bar (mobile) */
-.chat-active-bar { display:flex; align-items:center; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling: touch; padding-top:.6rem; padding-bottom:.6rem; position:relative; z-index:6; height:76px }
+.chat-active-bar { display:flex; align-items:center; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling: touch; padding-top:.4rem; padding-bottom:.4rem; flex:0 0 auto }
 .user-active-list-vertical { display:flex; gap:.5rem; align-items:center; padding-left:.5rem }
 .user-chip-vertical { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.3rem; background:transparent; border:none; padding:.15rem; min-width:56px; cursor:pointer }
 .user-avatar-wrap { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center }
@@ -1008,7 +1008,8 @@ table.tbl tbody tr:hover td {
 .user-name { font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; color:var(--ink) }
 
 /* reserve space so chat messages don't overlap the user bar */
-.chat-bg { padding-top: 86px; }
+/* chat-bg is flex child and will naturally be placed below the active bar */
+.chat-bg { padding-top: 0; }
 
 @media (min-width: 1024px) {
     .chat-active-bar { display:none }
