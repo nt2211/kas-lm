@@ -1403,7 +1403,14 @@ function mulaiAplikasi() {
             /* ---------- area warga ---------- */
             async muatTagihan(paksaSegar) {
                 const email = this.emailAktif();
-                await this.ambilDenganCache('tagihan:' + email + ':' + this.tahunTagihan, 'getTagihanSaya', [this.token, this.tahunTagihan], r => { this.tagihan = r; }, !!paksaSegar);
+                await this.ambilDenganCache('tagihan:' + email + ':' + this.tahunTagihan, 'getTagihanSaya', [this.token, this.tahunTagihan], r => {
+                    try {
+                        // normalize response: support both array (legacy) and object { rows }
+                        if (Array.isArray(r)) this.tagihan = { rows: r };
+                        else if (r && typeof r === 'object') this.tagihan = r;
+                        else this.tagihan = { rows: [] };
+                    } catch (e) { this.tagihan = { rows: [] }; }
+                }, !!paksaSegar);
             },
             async muatArusKas(paksaSegar) {
                 const email = this.emailAktif();
@@ -1434,7 +1441,12 @@ function mulaiAplikasi() {
                 this.toast('Konfirmasi terkirim. Menunggu verifikasi bendahara.', 'success');
                 const email = this.emailAktif();
                 this.batalkanCache(['beranda:' + email, 'tagihan:' + email, 'riwayat:' + email]);
-                await this.muatHalaman(this.page, true);
+                try {
+                    await this.muatHalaman(this.page, true);
+                } catch (err) {
+                    console.error('Error reloading page after pengajuan:', err);
+                    this.toast('Terjadi error saat memuat ulang data. Silakan muat ulang halaman.', 'error');
+                }
             },
             async simpanProfil() {
                 if (this.sedangSimpan) return;
