@@ -564,9 +564,13 @@ function mulaiAplikasi() {
                 this.tulisCache('profil_saya', p);
                 this.terapkanProfil(p);
                 if (p.Status === 'Aktif') {
-                    this.page = this.isAdmin ? 'dashboard' : 'beranda';
+                    // restore last page if available and valid for this role
+                    let lastPage = null;
+                    try { lastPage = localStorage.getItem('kaslm_lastpage'); } catch (e) { lastPage = null; }
+                    const defaultPage = this.isAdmin ? 'dashboard' : 'beranda';
+                    if (lastPage && (this.menuAktif || []).some(m => m.key === lastPage)) this.page = lastPage; else this.page = defaultPage;
                     await this.muatBundle();
-                    await this.muatHalaman(this.page);
+                    try { await this.muatHalaman(this.page); } catch (err) { console.error('muatHalaman error:', err); this.page = defaultPage; try { await this.muatHalaman(this.page); } catch (e) { console.error('fallback muatHalaman error', e); } }
                     this.startHeartbeat();
                 }
                 this.loading = false;
@@ -757,6 +761,7 @@ function mulaiAplikasi() {
                 if (this.page === 'chat' && key !== 'chat') this.stopPollingChat();
                 if (key === 'chat' && this.page !== 'chat') this.chatPrevPage = this.page;
                 this.page = key; this.moreSheet = false;
+                try { localStorage.setItem('kaslm_lastpage', key); } catch (e) { }
                 window.scrollTo({ top: 0 });
                 this.muatHalaman(key);
                 if (key === 'chat') this.$nextTick(() => this.afterMasukChat());

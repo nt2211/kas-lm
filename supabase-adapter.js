@@ -929,7 +929,7 @@ window.SupabaseBackend = {
             };
             out.tagihan = [];
             out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
-            out.arusKas = { trend: [] };
+            out.arusKas = await this.getArusKasWarga(token, tahun);
             out.galeri = galeri;
             out.pindah = pindah;
             out.chatUnread = notif.chat || 0;
@@ -1413,6 +1413,38 @@ window.SupabaseBackend = {
             Online: a.last_aktif ? (Date.now() - new Date(a.last_aktif).getTime() < 5 * 60 * 1000) : false,
             Last_Aktif: a.last_aktif || a.last_login || ''
         })).sort((a, b) => (b.Online ? 1 : 0) - (a.Online ? 1 : 0) || String(b.Last_Aktif || '').localeCompare(String(a.Last_Aktif || '')));
+    },
+
+    async getArusKasWarga(token, tahun) {
+        const th = Number(tahun) || (new Date().getFullYear());
+        const kini = new Date();
+        const bulanIni = kini.getMonth() + 1;
+
+        const [resMasuk, resKeluar] = await Promise.all([
+            sb.from('transaksi_masuk').select('*').eq('status', 'Lunas'),
+            sb.from('transaksi_keluar').select('*')
+        ]);
+
+        const rawMasuk = resMasuk.data || [];
+        const rawKeluar = resKeluar.data || [];
+
+        const trend = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(th, bulanIni - 1 - i, 1);
+            const b = d.getMonth() + 1, y = d.getFullYear();
+            const m = rawMasuk.filter(x => Number(x.periode_bulan) === b && Number(x.periode_tahun) === y).reduce((s, x) => s + Number(x.jumlah_bayar), 0);
+            const k = rawKeluar.filter(x => { const dd = new Date(x.tanggal); return (dd.getMonth() + 1) === b && dd.getFullYear() === y; }).reduce((s, x) => s + Number(x.jumlah), 0);
+            trend.push({ label: BULAN_NAMA[b - 1].substring(0, 3) + ' ' + String(y).slice(2), masuk: m, keluar: k });
+        }
+
+        const katMap = {}, jnsMap = {};
+        rawKeluar.filter(k => new Date(k.tanggal).getFullYear() === th).forEach(k => { katMap[k.kategori_pengeluaran] = (katMap[k.kategori_pengeluaran] || 0) + Number(k.jumlah); });
+        rawMasuk.filter(t => Number(t.periode_tahun) === th).forEach(t => { jnsMap[t.jenis_iuran] = (jnsMap[t.jenis_iuran] || 0) + Number(t.jumlah_bayar); });
+
+        const pemasukanJenis = Object.keys(jnsMap).map(k => ({ jenis: k, jumlah: jnsMap[k] }));
+        const pengeluaranKategori = Object.keys(katMap).map(k => ({ kategori: k, jumlah: katMap[k] }));
+
+        return { trend, pemasukanJenis, pengeluaranKategori, daftarKeluar: rawKeluar.filter(k => new Date(k.tanggal).getFullYear() === th) };
     },
 
     async getBerandaWarga(token) {
