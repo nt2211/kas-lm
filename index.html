@@ -490,6 +490,10 @@
                     <!-- ================= TAGIHAN ================= -->
                     <template v-if="page==='tagihan'">
                         <div class="flex items-end gap-3 flex-wrap no-print">
+                            <div class="flex items-center gap-2">
+                                <button :class="tagihanTab==='tagihan' ? 'btn btn-primary' : 'btn btn-ghost'" @click="tagihanTab='tagihan'">Tagihan</button>
+                                <button :class="tagihanTab==='riwayat' ? 'btn btn-primary' : 'btn btn-ghost'" @click="(tagihanTab='riwayat') || muatRiwayat(true)">Riwayat</button>
+                            </div>
                             <div><label class="lbl">Tahun</label><input v-model.number="tahunTagihan"
                                     @change="muatTagihan()" type="number" class="field w-28 num"></div>
                             <div><label class="lbl">Tampilkan</label>
@@ -501,10 +505,9 @@
                             </div>
                             <button @click="bukaFormBayar()" class="btn btn-primary ml-auto hidden sm:inline-flex"><i
                                     data-lucide="upload" class="w-4 h-4"></i> Konfirmasi bayar</button>
-                            <button @click="goTo('riwayat')" class="btn btn-ghost hidden sm:inline-flex">Riwayat</button>
                         </div>
 
-                        <div class="sm:hidden space-y-2.5">
+                        <div v-if="tagihanTab==='tagihan'" class="sm:hidden space-y-2.5">
                             <div v-for="r in tagihanRows" :key="'trm'+r.bulan" class="row-card"
                                 :style="r.diluar ? 'opacity:.5' : ''">
                                 <div class="flex items-start justify-between gap-3">
@@ -521,7 +524,7 @@
                             </div>
                         </div>
 
-                        <div class="hidden sm:block panel overflow-hidden">
+                        <div v-if="tagihanTab==='tagihan'" class="hidden sm:block panel overflow-hidden">
                             <div class="overflow-x-auto">
                                 <table class="tbl">
                                     <thead>
@@ -552,10 +555,65 @@
                                 </table>
                             </div>
                         </div>
-                        <p v-if="tagihan.bulanMulai && tagihan.bulanMulai.aktif" class="t-meta">
+                        <p v-if="tagihan.bulanMulai && tagihan.bulanMulai.aktif && tagihanTab==='tagihan'" class="t-meta">
                             Iuran dihitung mulai {{ BULAN_ID[tagihan.bulanMulai.bulan-1] }} {{ tagihan.bulanMulai.tahun
                             }}.
                         </p>
+
+                        <!-- RIWAYAT (tab) -->
+                        <div v-if="tagihanTab==='riwayat'">
+                            <div class="no-print"><label class="lbl">Tahun</label><input v-model.number="tahunRiwayat"
+                                    @change="muatRiwayat()" type="number" class="field w-28 num"></div>
+                            <div class="sm:hidden space-y-2.5">
+                                <div v-for="t in riwayat" :key="'rm'+t.ID_Transaksi" class="row-card">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="font-bold truncate">{{ t.Jenis_Iuran }}</p>
+                                            <p class="t-meta mt-0.5">{{ BULAN_ID[t.Periode_Bulan-1] }} {{ t.Periode_Tahun }} · {{ tglPendek(t.Tanggal) }}</p>
+                                        </div>
+                                        <span :class="['chip shrink-0', t.Status==='Lunas'?'chip-ok':'chip-warn']">{{ t.Status }}</span>
+                                    </div>
+                                    <div class="flex items-end justify-between mt-3 pt-3" style="border-top:1px solid var(--line-soft)">
+                                        <span class="t-label">Jumlah dibayar</span>
+                                        <p class="text-base font-extrabold num">{{ rupiah(t.Jumlah_Bayar) }}</p>
+                                    </div>
+                                    <button v-if="t.Status==='Lunas'" @click="bukaKuitansi(t)" class="btn btn-ghost btn-sm w-full mt-3"><i data-lucide="receipt-text" class="w-3.5 h-3.5"></i> Lihat kuitansi</button>
+                                </div>
+                                <p v-if="!riwayat.length" class="text-center py-10 text-sm" style="color:var(--muted)">Belum ada pembayaran tercatat di tahun ini.</p>
+                            </div>
+                            <div class="hidden sm:block panel overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="tbl">
+                                        <thead>
+                                            <tr>
+                                                <th>Tanggal</th>
+                                                <th>Iuran</th>
+                                                <th>Periode</th>
+                                                <th>Jumlah</th>
+                                                <th>Status</th>
+                                                <th class="no-print">Kuitansi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="t in riwayat" :key="t.ID_Transaksi">
+                                                <td>{{ tglPendek(t.Tanggal) }}</td>
+                                                <td class="font-medium" style="color:var(--ink)">{{ t.Jenis_Iuran }}</td>
+                                                <td>{{ BULAN_ID[t.Periode_Bulan-1] }} {{ t.Periode_Tahun }}</td>
+                                                <td class="num">{{ rupiah(t.Jumlah_Bayar) }}</td>
+                                                <td><span :class="['chip', t.Status==='Lunas'?'chip-ok':'chip-warn']">{{ t.Status }}</span></td>
+                                                <td class="no-print">
+                                                    <button v-if="t.Status==='Lunas'" @click="bukaKuitansi(t)" class="text-xs font-bold" style="color:var(--sea-700)">Lihat</button>
+                                                    <span v-else class="t-meta">—</span>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="!riwayat.length">
+                                                <td colspan="6" class="text-center py-10">Belum ada pembayaran tercatat di tahun ini.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </template>
 
                     <!-- ================= RIWAYAT ================= -->
@@ -2184,8 +2242,8 @@
         </div>
 
         <!-- ============ MODAL: KIRIM WA ============ -->
-        <div v-if="waModal" class="overlay no-print" style="z-index:88">
-            <div class="modal">
+        <div v-if="waModal" class="overlay no-print" style="z-index:88" @click="waModal=null">
+            <div class="modal" @click.stop>
                 <div class="grabber"></div>
                 <h3 class="text-lg font-extrabold mb-2">{{ waModal.mode==='otomatis' ? 'Pesan terkirim' : 'Kirim lewat WhatsApp' }}</h3>
                 <p class="text-sm mb-3" style="color:var(--muted)">{{ waModal.message }}</p>
