@@ -733,9 +733,15 @@ function mulaiAplikasi() {
             pilihFotoDaftar(e) {
                 const f = e.target.files[0]; if (!f) return;
                 if (f.size > 3 * 1024 * 1024) { this.toast('Foto maksimal 3 MB.', 'error'); e.target.value = ''; return; }
-                const r = new FileReader();
-                r.onload = () => { this.formDaftar.Foto_base64 = r.result.split(',')[1]; this.formDaftar.Foto_mime = f.type; };
-                r.readAsDataURL(f);
+                try {
+                    const base64 = await this.compressImageFile(f, 1200, 0.8);
+                    this.formDaftar.Foto_base64 = base64;
+                    this.formDaftar.Foto_mime = 'image/jpeg';
+                } catch (e) {
+                    const r = new FileReader();
+                    r.onload = () => { this.formDaftar.Foto_base64 = r.result.split(',')[1]; this.formDaftar.Foto_mime = f.type; };
+                    r.readAsDataURL(f);
+                }
             },
             async kirimPendaftaran() {
                 if (!this.formDaftar.Nama) {
@@ -905,17 +911,15 @@ function mulaiAplikasi() {
             unggah(e, target) {
                 const file = e.target.files[0]; if (!file) return;
                 if (file.size > 8 * 1024 * 1024) { this.toast('Ukuran maksimal 8 MB.', 'error'); e.target.value = ''; return; }
-                const reader = new FileReader();
-                reader.onload = async () => {
-                    const base64 = reader.result.split(',')[1];
+                try {
+                    const base64 = await (file.type && file.type.startsWith('image/') ? this.compressImageFile(file, 1600, 0.75) : this.bacaBase64(file));
                     let res; try { res = await this.call('uploadBuktiFile', this.token, base64, file.name, file.type); } catch (err) { return; }
                     const url = (res && typeof res === 'object' && res.url) ? res.url : (typeof res === 'string' ? res : (res && res.URL ? res.URL : ''));
                     if (target === 'masuk') this.formMasuk.Proof_URL = url;
                     else if (target === 'keluar') this.formKeluar.Bukti_Nota_URL = url;
                     else this.formBayar.Proof_URL = url;
                     this.toast('Bukti terunggah.', 'success');
-                };
-                reader.readAsDataURL(file);
+                } catch (e) { this.toast('Gagal memproses file.', 'error'); }
             },
 
             /* ---------- WhatsApp ---------- */
@@ -1046,7 +1050,7 @@ function mulaiAplikasi() {
                 for (const f of files) {
                     if (f.size > 5 * 1024 * 1024) { this.toast('"' + f.name + '" lebih dari 5 MB, dilewati.', 'error'); this.progressUpload.selesai++; continue; }
                     try {
-                        const base64 = await this.bacaBase64(f);
+                        const base64 = await (f.type && f.type.startsWith('image/') ? this.compressImageFile(f, 1600, 0.8) : this.bacaBase64(f));
                         await this.call('uploadFotoGaleri', this.token, this.albumUpload.ID_Galeri, base64, f.name, f.type);
                         this.progressUpload.selesai++;
                     } catch (err) { this.progressUpload.selesai++; }
@@ -1062,6 +1066,50 @@ function mulaiAplikasi() {
                     r.onload = () => resolve(r.result.split(',')[1]);
                     r.onerror = reject;
                     r.readAsDataURL(file);
+                });
+            },
+            compressImageFile(file, maxWidth = 1600, quality = 0.75) {
+                return new Promise((resolve, reject) => {
+                    if (!file || !file.type || !file.type.startsWith('image/')) {
+                        // not an image - fall back to raw base64
+                        const r = new FileReader();
+                        r.onload = () => resolve(r.result.split(',')[1]);
+                        r.onerror = reject;
+                        r.readAsDataURL(file);
+                        return;
+                    }
+                    const reader = new FileReader();
+                    const img = new Image();
+                    let originalBase64 = '';
+                    reader.onload = () => {
+                        originalBase64 = String(reader.result || '').split(',')[1] || '';
+                        img.src = reader.result;
+                    };
+                    reader.onerror = () => reject(new Error('Gagal membaca file'));
+                    img.onload = () => {
+                        try {
+                            let w = img.width, h = img.height;
+                            if (w > maxWidth) {
+                                h = Math.round(h * (maxWidth / w));
+                                w = maxWidth;
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            const out = canvas.toDataURL('image/jpeg', quality);
+                            resolve(out.split(',')[1]);
+                        } catch (e) {
+                            // fallback to original
+                            resolve(originalBase64);
+                        }
+                    };
+                    img.onerror = () => {
+                        // some formats may not load in browser canvas (HEIC) - fallback
+                        if (originalBase64) return resolve(originalBase64);
+                        reject(new Error('Gagal memproses gambar'));
+                    };
+                    reader.readAsDataURL(file);
                 });
             },
             /* Nama berbeda dari hapus foto profil supaya tidak saling menimpa. */
@@ -1208,7 +1256,7 @@ function mulaiAplikasi() {
                     this.loading = true;
                     this.loadingText = 'Mengunggah lampiran…';
                     try {
-                        const base64 = await this.bacaBase64(lampiran.file);
+                        const base64 = await (lampiran.file.type && lampiran.file.type.startsWith('image/') ? this.compressImageFile(lampiran.file, 1600, 0.75) : this.bacaBase64(lampiran.file));
                         const r = await this.jalankan('uploadLampiranChat', [this.token, base64, lampiran.name, lampiran.type]);
                         if (!r || !r.url) throw new Error('Gagal mengunggah lampiran.');
                         urlLampiran = r.url;
@@ -1471,8 +1519,8 @@ function mulaiAplikasi() {
                 const file = e.target.files[0]; if (!file) return;
                 if (file.size > 3 * 1024 * 1024) { this.toast('Foto maksimal 3 MB.', 'error'); e.target.value = ''; return; }
                 try {
-                    const base64 = await this.bacaBase64(file);
-                    const res = await this.call('uploadFotoProfil', this.token, base64, file.name, file.type);
+                    const base64 = await (file.type && file.type.startsWith('image/') ? this.compressImageFile(file, 1200, 0.85) : this.bacaBase64(file));
+                    const res = await this.call('uploadFotoProfil', this.token, base64, file.name, 'image/jpeg');
                     this.profil.Avatar = res.url; this.profil.Foto_URL = res.url;
                     this.toast('Foto diperbarui.', 'success');
                 } catch (err) { }
