@@ -1120,7 +1120,7 @@ window.SupabaseBackend = {
         const { error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
         const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
-        return { ok: true, url: pubUrl.publicUrl };
+        return pubUrl.publicUrl;
     },
 
     async uploadFotoGaleri(idGaleri, base64Data, fileName, mimeType) {
@@ -1506,51 +1506,6 @@ _${info.namaBendahara}_`;
             mode: 'manual', hp: nomor, url, pesan,
             message: 'Klik "Buka WhatsApp" untuk mengirim kuitansi.'
         };
-    },
-
-    // ------------------------------------------------------------------------
-    // TAGIHAN WARGA
-    // ------------------------------------------------------------------------
-    async getTagihanSaya(token, tahun) {
-        const profil = await this.getProfil(token);
-        if (!profil) return { rows: [] };
-        const noRumah = (profil.No_Rumah || '').toUpperCase().trim();
-        const th = Number(tahun) || new Date().getFullYear();
-        const pub = await this.getPengaturanPublik();
-        const nominal = Number(pub.Nominal_Kas_Bulanan) || 0;
-        const bulanMulai = { aktif: true, bulan: Number(pub.Bulan_Mulai_Iuran) || 1, tahun: Number(pub.Tahun_Mulai_Iuran) || th };
-
-        const { data: trx } = await sb.from('transaksi_masuk').select('*').eq('no_rumah', noRumah).eq('periode_tahun', th);
-        const byMonth = (trx || []).reduce((acc, t) => {
-            const b = Number(t.periode_bulan) || 0;
-            if (!acc[b]) acc[b] = [];
-            acc[b].push(t);
-            return acc;
-        }, {});
-
-        const rows = [];
-        for (let m = 1; m <= 12; m++) {
-            const list = byMonth[m] || [];
-            const dibayarLunas = list.filter(x => String(x.status || '').toLowerCase() === 'lunas').reduce((s, x) => s + (Number(x.jumlah_bayar) || 0), 0);
-            const dibayarPending = list.filter(x => String(x.status || '').toLowerCase() === 'pending' || String(x.status || '').toLowerCase().includes('menunggu')).reduce((s, x) => s + (Number(x.jumlah_bayar) || 0), 0);
-            let status = 'Belum bayar';
-            if (dibayarLunas >= nominal && nominal > 0) status = 'Lunas';
-            else if (dibayarPending > 0) status = 'Menunggu verifikasi';
-            else if (dibayarLunas > 0 && dibayarLunas < nominal) status = 'Kurang bayar';
-
-            const diluar = (bulanMulai && bulanMulai.aktif) ? ((th < bulanMulai.tahun) || (th === bulanMulai.tahun && m < bulanMulai.bulan)) : false;
-
-            rows.push({
-                bulan: m,
-                label: BULAN_NAMA[m - 1],
-                tagihan: nominal,
-                dibayar: dibayarLunas,
-                status: status,
-                diluar: !!diluar
-            });
-        }
-
-        return { bulanMulai, rows };
     },
 
     async kirimPengingat(token, noRumah, bulan, tahun) {
