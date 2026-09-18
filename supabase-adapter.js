@@ -920,15 +920,17 @@ window.SupabaseBackend = {
             out.pindah = pindah;
             out.chatList = await this.getChatPercakapanAdmin(token);
         } else if (profil) {
-            out.beranda = {
-                namaWarga: profil.Nama,
-                noRumah: profil.No_Rumah,
-                statusBulanIni: 'Lunas',
-                totalTunggakan: 0,
-                riwayatSingkat: trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase()).slice(0, 5)
-            };
-            out.tagihan = [];
-            out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
+            // populate beranda using dedicated function to ensure totals and shape
+            try {
+                const ber = await this.getBerandaWarga(token);
+                out.beranda = ber || { namaWarga: profil.Nama, noRumah: profil.No_Rumah, statusBulanIni: 'Lunas', totalTunggakan: 0, riwayatSingkat: [] };
+                out.tagihan = (ber && ber.tagihan) ? ber.tagihan : [];
+                out.riwayat = (ber && ber.riwayatSingkat) ? ber.riwayatSingkat : trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
+            } catch (e) {
+                out.beranda = { namaWarga: profil.Nama, noRumah: profil.No_Rumah, statusBulanIni: 'Lunas', totalTunggakan: 0, riwayatSingkat: [] };
+                out.tagihan = [];
+                out.riwayat = trxMasuk.filter(t => String(t.No_Rumah).toUpperCase() === String(profil.No_Rumah).toUpperCase());
+            }
             out.arusKas = await this.getArusKasWarga(token, tahun);
             out.galeri = galeri;
             out.pindah = pindah;
