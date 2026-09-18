@@ -492,12 +492,20 @@
                         <div class="flex items-end gap-3 flex-wrap no-print">
                             <div><label class="lbl">Tahun</label><input v-model.number="tahunTagihan"
                                     @change="muatTagihan()" type="number" class="field w-28 num"></div>
+                            <div><label class="lbl">Tampilkan</label>
+                                <select v-model="tagihanFilter" class="field w-44">
+                                    <option value="belum">Belum lunas</option>
+                                    <option value="lunas">Lunas</option>
+                                    <option value="semua">Semua</option>
+                                </select>
+                            </div>
                             <button @click="bukaFormBayar()" class="btn btn-primary ml-auto hidden sm:inline-flex"><i
                                     data-lucide="upload" class="w-4 h-4"></i> Konfirmasi bayar</button>
+                            <button @click="goTo('riwayat')" class="btn btn-ghost hidden sm:inline-flex">Riwayat</button>
                         </div>
 
                         <div class="sm:hidden space-y-2.5">
-                            <div v-for="r in tagihan.rows" :key="'trm'+r.bulan" class="row-card"
+                            <div v-for="r in tagihanRows" :key="'trm'+r.bulan" class="row-card"
                                 :style="r.diluar ? 'opacity:.5' : ''">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
@@ -526,7 +534,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="r in tagihan.rows" :key="'tr'+r.bulan"
+                                        <tr v-for="r in tagihanRows" :key="'tr'+r.bulan"
                                             :style="r.diluar ? 'opacity:.5' : ''">
                                             <td class="font-semibold" style="color:var(--ink)">{{ r.label }}</td>
                                             <td class="num">{{ rupiah(r.tagihan) }}</td>

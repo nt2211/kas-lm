@@ -73,7 +73,6 @@ function mulaiAplikasi() {
                     { key: 'chat', label: 'Chat', icon: 'message-circle' },
                     { key: 'galeri', label: 'Galeri', icon: 'images' },
                     { key: 'aruskas', label: 'Arus kas', icon: 'trending-up' },
-                    { key: 'riwayat', label: 'Riwayat', icon: 'history' },
                     { key: 'profil', label: 'Profil', icon: 'user' }
                 ],
 
@@ -107,6 +106,7 @@ function mulaiAplikasi() {
                 warga: { daftarTunggakan: [], kasUmum: {}, chatBelumDibaca: 0 },
                 arusKas: { trend: [], pemasukanJenis: [], pengeluaranKategori: [], daftarKeluar: [] }, tahunArus: now.getFullYear(),
                 tagihan: { rows: [] }, tahunTagihan: now.getFullYear(),
+                tagihanFilter: 'belum',
                 riwayat: [], tahunRiwayat: now.getFullYear(),
 
                 formProfil: { Tema: 'sistem', Notif_Email: true, Notif_WA: true },
@@ -194,6 +194,14 @@ function mulaiAplikasi() {
                 return this.pindahList.filter(p => p.Status === this.pindahFilter);
             },
             pengajuanPindahSaya() { return this.pindahSaya; }
+            ,
+            tagihanRows() {
+                const rows = Array.isArray(this.tagihan && this.tagihan.rows) ? this.tagihan.rows : [];
+                const f = this.tagihanFilter;
+                if (!f || f === 'belum') return rows.filter(r => String(r.status || '').toLowerCase() !== 'lunas');
+                if (f === 'lunas') return rows.filter(r => String(r.status || '').toLowerCase() === 'lunas');
+                return rows;
+            }
         },
 
         watch: {
@@ -887,9 +895,10 @@ function mulaiAplikasi() {
                 reader.onload = async () => {
                     const base64 = reader.result.split(',')[1];
                     let res; try { res = await this.call('uploadBuktiFile', this.token, base64, file.name, file.type); } catch (err) { return; }
-                    if (target === 'masuk') this.formMasuk.Proof_URL = res.url;
-                    else if (target === 'keluar') this.formKeluar.Bukti_Nota_URL = res.url;
-                    else this.formBayar.Proof_URL = res.url;
+                    const url = (res && typeof res === 'object' && res.url) ? res.url : (typeof res === 'string' ? res : (res && res.URL ? res.URL : ''));
+                    if (target === 'masuk') this.formMasuk.Proof_URL = url;
+                    else if (target === 'keluar') this.formKeluar.Bukti_Nota_URL = url;
+                    else this.formBayar.Proof_URL = url;
                     this.toast('Bukti terunggah.', 'success');
                 };
                 reader.readAsDataURL(file);

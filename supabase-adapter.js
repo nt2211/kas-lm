@@ -1120,7 +1120,7 @@ window.SupabaseBackend = {
         const { error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
         const { data: pubUrl } = sb.storage.from('kas-bukti').getPublicUrl(path);
-        return pubUrl.publicUrl;
+        return { ok: true, url: pubUrl.publicUrl };
     },
 
     async uploadFotoGaleri(idGaleri, base64Data, fileName, mimeType) {

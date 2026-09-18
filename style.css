@@ -861,7 +861,7 @@ table.tbl tbody tr:hover td {
 }
 
 .chat-panel-box {
-    /* display: flex; */
+    display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
