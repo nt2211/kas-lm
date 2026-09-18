@@ -1051,7 +1051,7 @@ function mulaiAplikasi() {
                     if (f.size > 5 * 1024 * 1024) { this.toast('"' + f.name + '" lebih dari 5 MB, dilewati.', 'error'); this.progressUpload.selesai++; continue; }
                     try {
                         const base64 = await (f.type && f.type.startsWith('image/') ? this.compressImageFile(f, 1600, 0.8) : this.bacaBase64(f));
-                        await this.call('uploadFotoGaleri', this.token, this.albumUpload.ID_Galeri, base64, f.name, f.type);
+                        await this.call('uploadFotoGaleri', this.albumUpload.ID_Galeri, base64, f.name, f.type);
                         this.progressUpload.selesai++;
                     } catch (err) { this.progressUpload.selesai++; }
                 }
