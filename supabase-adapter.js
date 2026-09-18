@@ -36,16 +36,34 @@ function base64ToBlob(base64, mime) {
         base64 = base64.split(',')[1];
     }
     // sanitize common issues: whitespace, URL-safe base64, padding
-    base64 = String(base64 || '').replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    base64 = String(base64 || '');
+    // if looks URL-encoded (contains %), try decode first
+    if (base64.indexOf('%') >= 0) {
+        try { base64 = decodeURIComponent(base64); } catch (e) { /* ignore */ }
+    }
+    // if data URI slipped through, strip header
+    if (base64.includes(',')) base64 = base64.split(',')[1];
+    base64 = base64.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
     while (base64.length % 4) base64 += '=';
     let byteCharacters;
-    try {
-        byteCharacters = atob(base64);
-    } catch (e) {
-        // try to remove any non-base64 chars and retry
+    if (!base64 || typeof base64 !== 'string') throw new Error('Empty base64 string');
+    const base64match = /^[A-Za-z0-9+/=]+$/.test(base64);
+    if (!base64match) {
         const cleaned = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+        if (!cleaned) throw new Error('Invalid base64 string provided');
         try { byteCharacters = atob(cleaned); }
-        catch (e2) { throw new Error('Invalid base64 string provided'); }
+        catch (e2) {
+            // last attempt: maybe was URI-encoded earlier but decodeURIComponent failed; try a looser decode
+            try {
+                const loose = decodeURIComponent(escape(cleaned));
+                byteCharacters = atob(loose.replace(/[^A-Za-z0-9+/=]/g, ''));
+            } catch (e3) {
+                throw new Error('Invalid base64 string provided');
+            }
+        }
+    } else {
+        try { byteCharacters = atob(base64); }
+        catch (e) { throw new Error('Invalid base64 string provided'); }
     }
     const byteArrays = [];
     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
@@ -1223,7 +1241,11 @@ window.SupabaseBackend = {
     // STORAGE UPLOAD
     // ------------------------------------------------------------------------
     async uploadBuktiFile(token, base64Data, fileName, mimeType) {
-        const blob = base64ToBlob(base64Data, mimeType);
+        let blob;
+        try { blob = base64ToBlob(base64Data, mimeType); } catch (e) {
+            console.error('uploadBuktiFile: invalid base64 prefix:', String(base64Data || '').slice(0, 80));
+            throw new Error('Unggah gagal: data gambar tidak valid. (' + e.message + ')');
+        }
         const path = Date.now() + '_' + (fileName || 'bukti.jpg');
         const { error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
@@ -1232,7 +1254,11 @@ window.SupabaseBackend = {
     },
 
     async uploadFotoGaleri(idGaleri, base64Data, fileName, mimeType) {
-        const blob = base64ToBlob(base64Data, mimeType);
+        let blob;
+        try { blob = base64ToBlob(base64Data, mimeType); } catch (e) {
+            console.error('uploadFotoGaleri: invalid base64 prefix:', String(base64Data || '').slice(0, 80));
+            throw new Error('Unggah gagal: data foto tidak valid. (' + e.message + ')');
+        }
         const path = idGaleri + '_' + Date.now() + '_' + (fileName || 'foto.jpg');
         const { error } = await sb.storage.from('kas-galeri').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
@@ -1252,7 +1278,11 @@ window.SupabaseBackend = {
     async uploadFotoProfil(token, base64Data, fileName, mimeType) {
         const sess = SessionStore.get(token);
         if (!sess || !sess.email) throw new Error('Sesi tidak valid.');
-        const blob = base64ToBlob(base64Data, mimeType);
+        let blob;
+        try { blob = base64ToBlob(base64Data, mimeType); } catch (e) {
+            console.error('uploadFotoProfil: invalid base64 prefix:', String(base64Data || '').slice(0, 80));
+            throw new Error('Unggah gagal: data foto profil tidak valid. (' + e.message + ')');
+        }
         const path = 'profil_' + Date.now() + '_' + (fileName || 'foto.jpg');
         const { error } = await sb.storage.from('kas-foto').upload(path, blob, { contentType: mimeType || 'image/jpeg' });
         if (error) throw new Error(error.message);
@@ -1263,7 +1293,11 @@ window.SupabaseBackend = {
     },
 
     async uploadQrCode(token, base64Data, mimeType) {
-        const blob = base64ToBlob(base64Data, mimeType);
+        let blob;
+        try { blob = base64ToBlob(base64Data, mimeType); } catch (e) {
+            console.error('uploadQrCode: invalid base64 prefix:', String(base64Data || '').slice(0, 80));
+            throw new Error('Unggah gagal: QR code tidak valid. (' + e.message + ')');
+        }
         const path = 'qr_' + Date.now() + '.png';
         const { error } = await sb.storage.from('kas-bukti').upload(path, blob, { contentType: mimeType || 'image/png' });
         if (error) throw new Error(error.message);
@@ -1485,7 +1519,11 @@ window.SupabaseBackend = {
     // UPLOAD LAMPIRAN CHAT
     // ------------------------------------------------------------------------
     async uploadLampiranChat(token, base64Data, fileName, mimeType) {
-        const blob = base64ToBlob(base64Data, mimeType);
+        let blob;
+        try { blob = base64ToBlob(base64Data, mimeType); } catch (e) {
+            console.error('uploadLampiranChat: invalid base64 prefix:', String(base64Data || '').slice(0, 80));
+            throw new Error('Unggah lampiran gagal: data tidak valid. (' + e.message + ')');
+        }
         const safeName = (fileName || 'lampiran').replace(/[^\w.\-]/g, '_');
         const path = 'chat_' + Date.now() + '_' + safeName;
         const { error } = await sb.storage.from('kas-bukti').upload(path, blob, {
